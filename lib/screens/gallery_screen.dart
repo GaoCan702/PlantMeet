@@ -115,23 +115,16 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
                 if (species.isEmpty)
                   Card(
-                    child: Padding(
+                    child: Container(
+                      width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.eco,
-                              size: 48,
-                              color: Colors.green.shade400,
-                            ),
+                          Icon(
+                            Icons.eco,
+                            size: 64,
+                            color: Colors.grey[400],
                           ),
                           const SizedBox(height: 24),
                           Text(
