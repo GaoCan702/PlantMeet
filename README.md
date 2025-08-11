@@ -1,17 +1,279 @@
-# plantmeet
+# 🌱 PlantMeet (遇见植物)
 
-Plant Meet
+<div align="center">
+  <img src="assets/logo/logo_base.svg" alt="PlantMeet Logo" width="128" height="128">
+  
+  **A "small and beautiful" plant identification app for students and plant enthusiasts**
+  
+  [![Flutter](https://img.shields.io/badge/Flutter-3.8.1+-blue.svg)](https://flutter.dev)
+  [![Dart](https://img.shields.io/badge/Dart-3.0+-blue.svg)](https://dart.dev)
+  [![License](https://img.shields.io/badge/License-Private-red.svg)](#)
+  
+  [简体中文](README_zh.md) | English
+</div>
 
-## Getting Started
+## 📖 About
 
-This project is a starting point for a Flutter application.
+PlantMeet is a minimalist plant identification app designed for students and plant enthusiasts. It focuses on three core features: **identification**, **recording** (with smart deduplication), and **export**. The app uses a hybrid recognition approach combining local MNN chat API (primary) with optional cloud API (BYOK - Bring Your Own Key).
 
-A few resources to get you started if this is your first Flutter project:
+### Design Philosophy: "Small and Beautiful" (小而美)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Minimalist**: Only identification, recording, and export - nothing more
+- **Local-first**: Default to local processing for zero cost and privacy
+- **Smart deduplication**: Merge same plant species with multiple encounter records
+- **Export-focused**: PDF generation for physical field guides
+- **Privacy-conscious**: Local storage by default, optional cloud with user consent
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-# PlantMeet
+## ✨ Features
+
+### 🔍 Plant Identification
+- **Local Recognition**: Primary identification using local MNN chat API
+- **Cloud Backup**: Optional cloud recognition with user-provided API keys (BYOK)
+- **Capture First**: Stable "capture then identify" approach instead of real-time preview
+
+### 📔 Smart Recording
+- **My Plant Guide**: Personal collection of identified plants
+- **Encounter Tracking**: Record multiple meetings with the same species
+- **Smart Deduplication**: Automatically merge duplicate species
+- **Rich Records**: Time, location, photos, and personal notes for each encounter
+
+### 📄 Export & Share
+- **PDF Export**: Generate beautiful field guides for printing
+- **Offline Access**: All data available without internet connection
+- **Privacy Control**: Data stays local unless explicitly shared
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Flutter SDK 3.8.1 or higher
+- Dart 3.0 or higher
+- Android Studio / VS Code with Flutter extensions
+- For Android: Android SDK 21+ (Android 5.0+)
+- For iOS: iOS 11.0+
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/GaoCan702/PlantMeet.git
+   cd PlantMeet
+   ```
+
+2. **Install dependencies**
+   ```bash
+   flutter pub get
+   ```
+
+3. **Run the app**
+   ```bash
+   flutter run
+   ```
+
+### Building
+
+#### Android
+```bash
+# Debug APK
+flutter build apk --debug
+
+# Release APK
+flutter build apk --release
+
+# App Bundle (for Play Store)
+flutter build appbundle --release
+```
+
+#### iOS
+```bash
+flutter build ios --release
+```
+
+#### Web
+```bash
+flutter build web
+```
+
+## 🏗️ Architecture
+
+### Project Structure
+```
+lib/
+├── main.dart              # App entry point
+├── models/               # Data models
+│   ├── plant_species.dart
+│   ├── plant_encounter.dart
+│   └── recognition_result.dart
+├── screens/             # UI screens
+│   ├── home_screen.dart
+│   ├── camera_screen.dart
+│   ├── gallery_screen.dart
+│   └── settings_screen.dart
+├── services/            # Business logic
+│   ├── database_service.dart
+│   ├── recognition_service.dart
+│   └── pdf_export_service.dart
+└── widgets/            # Reusable UI components
+```
+
+### Tech Stack
+
+#### Core Framework
+- **Flutter**: Cross-platform UI framework
+- **Dart**: Programming language
+
+#### State Management
+- **Provider**: Simple and scalable state management
+
+#### Database & Storage
+- **Drift**: Type-safe SQL database (SQLite)
+- **SharedPreferences**: Simple key-value storage
+- **Path Provider**: File system path access
+
+#### Networking & APIs
+- **HTTP**: RESTful API client
+- **Camera**: Photo capture functionality
+- **Image Picker**: Gallery photo selection
+
+#### Features
+- **PDF**: Document generation and export
+- **Geolocator**: Location services
+- **Share Plus**: System sharing integration
+- **Permission Handler**: Runtime permissions
+
+#### Development
+- **Flutter Lints**: Code quality and style
+- **Build Runner**: Code generation
+- **Mocktail**: Testing framework
+
+## 🎯 Key Components
+
+### Data Models
+- **Species**: Unique plant entries with taxonomic ID
+- **Encounter**: Individual sightings with time, location, photos, notes
+- **Recognition Results**: Top-3 candidates with confidence scores
+
+### Services
+- **Recognition Service**: Handles both local and cloud plant identification
+- **Database Service**: Manages local data storage and smart deduplication
+- **PDF Export Service**: Generates printable field guides
+- **Permission Service**: Manages camera and location permissions
+
+## 🛠️ Development
+
+### Code Style
+- Follow Dart/Flutter standard style guidelines
+- Use `flutter_lints` for code quality
+- Prefer single quotes for strings
+- Run `flutter format .` before committing
+
+### Testing
+```bash
+# Run all tests
+flutter test
+
+# Run with coverage
+flutter test --coverage
+
+# Static analysis
+flutter analyze
+```
+
+### Quality Checks
+```bash
+# Format code
+flutter format .
+
+# Analyze code
+flutter analyze
+
+# Run tests
+flutter test
+```
+
+## 📱 Supported Platforms
+
+- ✅ **Android**: API 21+ (Android 5.0+)
+- ✅ **iOS**: iOS 11.0+
+- ✅ **Web**: Modern browsers
+- ✅ **macOS**: macOS 10.14+
+- ✅ **Windows**: Windows 10+
+- ✅ **Linux**: Ubuntu 20.04+
+
+## 🎨 Brand & Assets
+
+### Logo System
+The PlantMeet logo is based on Material Design's eco icon, representing our connection to nature and sustainability.
+
+- **Logo Files**: Available in `assets/logo/`
+- **SVG Sources**: `logo_base.svg` (detailed) and `logo_simple.svg` (simplified)
+- **Generated Icons**: Automated generation script for all platform requirements
+
+### Icon Generation
+```bash
+cd assets/logo
+python generate_icons.py
+```
+
+This generates 32 icons across all platforms:
+- Android: 5 density variants
+- iOS: 15 size variants
+- Web: 5 icon types
+- macOS: 7 size variants
+
+## 🔐 Privacy & Security
+
+### Local-First Approach
+- All plant data stored locally by default
+- No data uploaded without explicit user consent
+- Cloud recognition only with user-provided API keys
+
+### Permissions
+- **Camera**: Required for plant photography
+- **Storage**: For saving photos and PDF exports
+- **Location**: Optional, for encounter tracking
+
+## 📋 Roadmap
+
+### Version 1.0 (MVP) - Current
+- [x] Basic plant identification
+- [x] Local data storage
+- [x] Photo capture and gallery
+- [x] Settings and onboarding
+- [x] Brand identity and icons
+
+### Future Enhancements
+- [ ] Local MNN model integration
+- [ ] Cloud API integration (BYOK)
+- [ ] PDF export functionality
+- [ ] Advanced plant details
+- [ ] Location-based encounters
+- [ ] Improved UI/UX
+
+## 🤝 Contributing
+
+This is currently a private project. For development guidelines, see [CLAUDE.md](CLAUDE.md).
+
+## 📄 Documentation
+
+- **[CLAUDE.md](CLAUDE.md)**: Development guidelines for Claude Code
+- **[plantmeet_prd.md](plantmeet_prd.md)**: Product requirements (Chinese)
+- **[Logo Generation Guide](assets/logo/generate_icons.md)**: Icon creation process
+
+## 🐛 Issues & Support
+
+For issues and feature requests, please contact the development team.
+
+## 📊 Project Stats
+
+- **Package**: `com.arousedata.plantmeet`
+- **Version**: 1.0.0+1
+- **Flutter**: 3.8.1+
+- **Platforms**: 6 supported
+- **Dependencies**: 20+ production packages
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ using Flutter</sub>
+</div>
