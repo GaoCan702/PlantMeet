@@ -4,6 +4,11 @@ import '../models/app_settings.dart';
 import '../services/app_state.dart';
 import '../services/recognition_service.dart';
 import '../widgets/copyable_error_message.dart';
+import '../models/privacy_policy.dart';
+import '../services/privacy_service.dart';
+import 'mnn_chat_test_screen.dart';
+import 'policy_detail_screen.dart';
+import 'privacy_consent_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -221,9 +226,287 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            // MNN Chat 测试区域
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'MNN Chat 测试',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '测试MNN Chat连接状态和植物识别功能，查看详细日志和识别结果',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => MNNChatTestScreen(
+                                appSettings: _settings,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.science),
+                        label: const Text('打开 MNN Chat 测试页面'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.all(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // 隐私协议区域
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '隐私与协议',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // 隐私政策
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        Icons.privacy_tip,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: const Text('隐私政策'),
+                      subtitle: Text(
+                        '了解我们如何收集、使用和保护您的个人信息',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const PolicyDetailScreen(
+                              title: '隐私政策',
+                              content: PrivacyPolicy.privacyPolicyContent,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    const Divider(),
+                    
+                    // 用户协议
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        Icons.description,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: const Text('用户协议'),
+                      subtitle: Text(
+                        '查看使用PlantMeet应用的条款和条件',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const PolicyDetailScreen(
+                              title: '用户协议',
+                              content: PrivacyPolicy.userAgreementContent,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    const Divider(),
+                    
+                    // 协议状态
+                    FutureBuilder<Map<String, dynamic>>(
+                      future: PrivacyService.getConsentSummary(),
+                      builder: (context, snapshot) {
+                        final summary = snapshot.data;
+                        final isConsented = summary?['is_consented'] ?? false;
+                        final consentDate = summary?['consent_date'];
+                        
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            isConsented ? Icons.verified_user : Icons.warning,
+                            color: isConsented 
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.error,
+                          ),
+                          title: Text(isConsented ? '已同意协议' : '未同意协议'),
+                          subtitle: Text(
+                            isConsented && consentDate != null
+                                ? '同意时间：${DateTime.parse(consentDate).toLocal().toString().substring(0, 19)}'
+                                : '请阅读并同意用户协议和隐私政策',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                          trailing: isConsented 
+                              ? TextButton(
+                                  onPressed: () => _showRevokeDialog(),
+                                  child: const Text('撤回同意'),
+                                )
+                              : TextButton(
+                                  onPressed: () => _showConsentDialog(),
+                                  child: const Text('重新同意'),
+                                ),
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    // 版本信息
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '协议版本信息',
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '当前版本：${PrivacyPolicy.currentVersion}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          Text(
+                            '更新时间：${PrivacyPolicy.lastUpdated}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+  
+  /// 显示撤回同意对话框
+  void _showRevokeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('撤回同意'),
+          content: const Text(
+            '撤回同意将会：\n\n'
+            '• 删除您的个人数据\n'
+            '• 停止数据收集和处理\n'
+            '• 可能影响应用正常使用\n\n'
+            '确定要撤回对用户协议和隐私政策的同意吗？'
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  await PrivacyService.revokeConsent();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('已撤回同意，应用将重启以应用更改'),
+                    ),
+                  );
+                  // 这里可以重启应用或返回到同意页面
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('撤回同意失败: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: Text(
+                '确认撤回',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  /// 显示重新同意对话框
+  void _showConsentDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('重新同意协议'),
+          content: const Text(
+            '请重新阅读并同意最新版本的用户协议和隐私政策。\n\n'
+            '这将允许应用正常收集和处理必要的数据以提供服务。'
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // 导航到协议同意页面
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => PrivacyConsentScreen(
+                      onConsented: () {
+                        Navigator.of(context).pop();
+                        // 刷新页面状态
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                );
+              },
+              child: const Text('重新同意'),
+            ),
+          ],
+        );
+      },
     );
   }
 

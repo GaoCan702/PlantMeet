@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/index.dart';
+import '../models/privacy_policy.dart';
 import '../services/database_service.dart';
 import '../services/recognition_service.dart';
+import '../services/privacy_service.dart';
 
 class AppState extends ChangeNotifier {
   final DatabaseService databaseService;
@@ -11,6 +13,7 @@ class AppState extends ChangeNotifier {
   List<PlantEncounter> _encounters = [];
   bool _isLoading = false;
   String? _error;
+  PolicyConsent? _policyConsent;
 
   AppState({required this.databaseService});
 
@@ -19,6 +22,7 @@ class AppState extends ChangeNotifier {
   List<PlantEncounter> get encounters => _encounters;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  PolicyConsent? get policyConsent => _policyConsent;
   
   // 检查是否已配置识别服务
   bool get isConfigured {
@@ -28,8 +32,18 @@ class AppState extends ChangeNotifier {
   Future<void> initialize() async {
     _setLoading(true);
     try {
-      _settings = await databaseService.getSettings() ?? AppSettings();
-      await _loadData();
+      // 首先初始化隐私守卫
+      await PrivacyService.initialize();
+      _policyConsent = await PrivacyService.getUserConsent();
+      
+      // 只有在用户同意隐私政策后才加载设置和数据
+      if (_policyConsent?.isFullyConsented == true) {
+        _settings = await databaseService.getSettings() ?? AppSettings();
+        await _loadData();
+      } else {
+        // 如果没有同意，只设置默认设置，不加载任何个人数据
+        _settings = AppSettings();
+      }
     } catch (e) {
       _setError('Failed to initialize app: $e');
     } finally {

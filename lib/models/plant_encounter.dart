@@ -1,4 +1,6 @@
 
+import 'recognition_result.dart';
+
 class PlantEncounter {
   final String id;
   final String speciesId;
@@ -98,8 +100,3 @@ enum RecognitionSource {
   gallery,
 }
 
-enum RecognitionMethod {
-  local,
-  cloud,
-  manual,
-}
