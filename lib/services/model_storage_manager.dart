@@ -20,6 +20,11 @@ class ModelStorageManager {
     return path.join(appDir.path, _modelBasePath);
   }
 
+  /// 获取模型目录路径
+  Future<String> getModelDirectory() async {
+    return await getModelBasePath();
+  }
+
   Future<String> getModelPath(String modelId) async {
     final basePath = await getModelBasePath();
     return path.join(basePath, _gemmaModelPath);

@@ -12,8 +12,8 @@ import 'huggingface_client.dart';
 import 'model_storage_manager.dart';
 
 class ModelDownloader {
-  // 开发模式标志 - 根据是否配置 token 动态决定
-  bool get _useMockDownload => !_hasValidToken();
+  // 不再使用模拟下载，直接使用真实的 HuggingFace 客户端
+  bool get _useMockDownload => false;
   
   // Google AI Edge Gallery 官方下载源
   static const String _aiEdgeReleaseUrl = 'https://github.com/google-ai-edge/gallery/releases/latest/download/gemma-3n-4b-it-litert.task';
@@ -67,14 +67,6 @@ class ModelDownloader {
       : _dio = Dio() {
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(minutes: 10);
-  }
-
-  void updateHuggingFaceToken(String? token) {
-    _huggingFaceClient.updateAccessToken(token);
-  }
-
-  bool _hasValidToken() {
-    return _huggingFaceClient.hasValidToken;
   }
 
   Stream<DownloadProgress> downloadModel(String modelId) async* {
@@ -277,7 +269,7 @@ class ModelDownloader {
 
   int _getExpectedFileSize(String fileName) {
     if (fileName == 'gemma-3n-E4B-it-int4.task') {
-      return 4741734400; // 4.41GB LiteRT 任务文件
+      return 4405655031; // 4.10GB LiteRT 任务文件
     } else if (fileName == 'model.tflite') {
       return 2000 * 1024 * 1024; // 2GB 传统模型
     } else if (fileName == 'tokenizer.json') {
@@ -290,7 +282,7 @@ class ModelDownloader {
   List<int> _createMockFileContent(String fileName) {
     if (fileName == 'gemma-3n-E4B-it-int4.task') {
       // 创建一个假的 LiteRT 任务文件
-      final content = List<int>.filled(4741734400, 0);
+      final content = List<int>.filled(4405655031, 0);
       // 添加 LiteRT 任务文件魔数标识
       const taskMagic = [0x54, 0x41, 0x53, 0x4B]; // "TASK"
       for (int i = 0; i < taskMagic.length; i++) {

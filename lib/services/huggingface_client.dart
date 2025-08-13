@@ -8,41 +8,29 @@ class HuggingFaceClient {
   static const String _apiBaseUrl = 'https://huggingface.co/api';
   // 使用 Gemma 3n E4B LiteRT 模型，专为移动设备优化
   static const String _modelId = 'google/gemma-3n-E4B-it-litert-preview';
+  // 通过 --dart-define=HF_ACCESS_TOKEN=... 注入；为空时匿名请求
+  static const String _envAccessToken = String.fromEnvironment('HF_ACCESS_TOKEN', defaultValue: '');
   
   final Dio _dio;
   final Logger _logger = Logger();
-  String? _accessToken;
   
-  HuggingFaceClient({String? accessToken}) : _dio = Dio(), _accessToken = accessToken {
+  HuggingFaceClient() : _dio = Dio() {
     _dio.options.baseUrl = _apiBaseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(minutes: 5);
-    _dio.options.headers = {
+    final headers = <String, String>{
       'User-Agent': 'PlantMeet/1.0 Flutter App',
       'Accept': 'application/json',
     };
+    if (_envAccessToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $_envAccessToken';
+    }
+    _dio.options.headers = headers;
     
-    // 添加认证头
-    if (_accessToken != null && _accessToken!.isNotEmpty) {
-      _dio.options.headers['Authorization'] = 'Bearer $_accessToken';
-      _logger.i('HuggingFace client initialized with access token');
-    } else {
-      _logger.w('HuggingFace client initialized without access token');
-    }
+    _logger.i('HuggingFace client initialized with embedded access token');
   }
 
-  void updateAccessToken(String? token) {
-    _accessToken = token;
-    if (token != null && token.isNotEmpty) {
-      _dio.options.headers['Authorization'] = 'Bearer $token';
-      _logger.i('HuggingFace access token updated');
-    } else {
-      _dio.options.headers.remove('Authorization');
-      _logger.i('HuggingFace access token removed');
-    }
-  }
-
-  bool get hasValidToken => _accessToken != null && _accessToken!.isNotEmpty;
+  bool get hasValidToken => _envAccessToken.isNotEmpty;
 
   /// 获取模型基本信息
   Future<ModelInfo> getModelInfo() async {
@@ -58,7 +46,7 @@ class HuggingFaceClient {
         name: 'Gemma 3n E4B LiteRT Preview',
         version: data['sha'] ?? 'latest',
         description: 'Google Gemma 3 Nano multimodal model optimized for mobile devices with vision support (LiteRT)',
-        sizeBytes: 4741734400, // 4.41GB 准确大小
+        sizeBytes: 4405655031, // 4.10GB 准确大小
         requiredFiles: ['gemma-3n-E4B-it-int4.task'], // LiteRT 任务文件
         metadata: {
           'author': 'Google',
@@ -206,7 +194,7 @@ class HuggingFaceClient {
   /// 估算文件大小
   int _estimateFileSize(String fileName) {
     if (fileName == 'gemma-3n-E4B-it-int4.task') {
-      return 4741734400; // 4.41GB 准确大小
+      return 4405655031; // 4.10GB 准确大小
     }
     if (fileName.endsWith('.json')) {
       return 2048; // ~2KB JSON配置文件
@@ -216,7 +204,7 @@ class HuggingFaceClient {
 
   /// 估算模型总大小
   int _estimateModelSize() {
-    return 4741734400; // 4.41GB LiteRT 任务文件准确大小
+    return 4405655031; // 4.10GB LiteRT 任务文件准确大小
   }
 
   /// 获取默认模型信息（降级处理）
@@ -259,7 +247,7 @@ class HuggingFaceClient {
     return [
       ModelFile(
         name: 'gemma-3n-E4B-it-int4.task',
-        size: 4741734400, // 4.41GB 准确大小
+        size: 4405655031, // 4.10GB 准确大小
         downloadUrl: '$_baseUrl/$_modelId/resolve/main/gemma-3n-E4B-it-int4.task',
         checksum: null,
       ),
@@ -276,12 +264,13 @@ class HuggingFaceClient {
     try {
       _logger.i('开始测试 HuggingFace 连接，模型: $_modelId');
       
-      final response = await _dio.get('/models/$_modelId', 
+      final response = await _dio.get(
+        '/models/$_modelId',
         options: Options(
           receiveTimeout: const Duration(seconds: 15),
-          headers: {
-            'Authorization': 'Bearer $_accessToken',
-          },
+          headers: _envAccessToken.isNotEmpty
+              ? {'Authorization': 'Bearer $_envAccessToken'}
+              : {},
         ),
       );
       

@@ -51,6 +51,7 @@ class FlutterGemmaPlugin {
 
 class GemmaInferenceService {
   static const String _modelId = 'google/gemma-3n-E4B-it-litert-preview';
+  static const String _modelFileName = 'gemma-3n-E4B-it-int4.task';
   
   final ModelStorageManager _storageManager;
   final DeviceCapabilityDetector _capabilityDetector;
@@ -76,18 +77,12 @@ class GemmaInferenceService {
     try {
       _logger.i('Initializing Gemma model...');
       
-      // Check if model is downloaded
-      final isDownloaded = await _storageManager.isModelDownloaded(_modelId);
-      if (!isDownloaded) {
-        throw Exception('Model not downloaded. Please download the model first.');
-      }
-
-      // Get model path
+      // Check if model files exist directly instead of relying on status
       final modelPath = await _storageManager.getModelPath(_modelId);
-      final modelFile = File('$modelPath/model.tflite');
+      final modelFile = File('$modelPath/$_modelFileName');
       
       if (!await modelFile.exists()) {
-        throw Exception('Model file not found at: ${modelFile.path}');
+        throw Exception('Model file not found at: ${modelFile.path}. Please download the model first.');
       }
 
       // Get device capability for optimal configuration

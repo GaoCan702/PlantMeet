@@ -47,3 +47,4 @@ app.*.map.json
 model/*.bin
 model/*.weight
 model/tokenizer.txt
+reference_repo/

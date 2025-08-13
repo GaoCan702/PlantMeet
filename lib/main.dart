@@ -8,6 +8,8 @@ import 'screens/gallery_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/error_demo_screen.dart';
 import 'screens/embedded_model_manager_screen.dart';
+import 'screens/mnn_chat_config_screen.dart';
+import 'screens/cloud_service_config_screen.dart';
 import 'services/app_state.dart';
 import 'services/database_service.dart';
 import 'services/database.dart';
@@ -15,9 +17,7 @@ import 'services/onboarding_service.dart';
 import 'services/embedded_model_service.dart';
 import 'services/model_storage_manager.dart';
 import 'services/device_capability_detector.dart';
-import 'services/modelscope_client.dart';
-import 'services/huggingface_client.dart';
-import 'services/model_downloader.dart';
+import 'services/simple_model_downloader.dart';
 import 'services/gemma_inference_service.dart';
 
 void main() async {
@@ -30,16 +30,12 @@ void main() async {
   // 初始化应用内模型服务
   final storageManager = ModelStorageManager();
   final capabilityDetector = DeviceCapabilityDetector();
-  final modelScopeClient = ModelScopeClient();
-  final huggingFaceClient = HuggingFaceClient(); // 添加 HuggingFace 客户端
-  final downloader = ModelDownloader(storageManager, modelScopeClient, huggingFaceClient); // 更新构造函数
+  final simpleDownloader = SimpleModelDownloader(storageManager);
   final inferenceService = GemmaInferenceService(storageManager, capabilityDetector);
   final embeddedModelService = EmbeddedModelService(
     storageManager: storageManager,
     capabilityDetector: capabilityDetector,
-    modelScopeClient: modelScopeClient,
-    huggingFaceClient: huggingFaceClient, // 添加 HuggingFace 客户端
-    downloader: downloader,
+    downloader: simpleDownloader,
     inferenceService: inferenceService,
   );
   
@@ -49,7 +45,6 @@ void main() async {
   // 并行初始化服务
   await Future.wait([
     appState.initialize(),
-    embeddedModelService.initialize(),
   ]);
   
   // 检查是否显示新手引导
@@ -64,6 +59,11 @@ void main() async {
       child: PlantMeetApp(hasSeenOnboarding: hasSeenOnboarding),
     ),
   );
+
+  // 首帧渲染后再初始化本地模型服务，避免阻塞冷启动
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    embeddedModelService.initialize();
+  });
 }
 
 class PlantMeetApp extends StatelessWidget {
@@ -120,6 +120,8 @@ class PlantMeetApp extends StatelessWidget {
         '/onboarding': (context) => const OnboardingScreen(),
         '/error-demo': (context) => const ErrorDemoScreen(),
         '/embedded-model-manager': (context) => const EmbeddedModelManagerScreen(),
+        '/mnn-chat-config': (context) => const MNNChatConfigScreen(),
+        '/cloud-service-config': (context) => const CloudServiceConfigScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/plant-detail') {

@@ -29,10 +29,15 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
                 children: [
                   _buildHeaderSection(context, modelService),
                   const SizedBox(height: 24),
-                  _buildStatusSection(context, modelService),
-                  const SizedBox(height: 24),
-                  if (modelService.state.status == ModelStatus.downloading)
+                  // 只在非下载状态时显示状态卡片，避免重复
+                  if (modelService.state.status != ModelStatus.downloading)
+                    _buildStatusSection(context, modelService),
+                  if (modelService.state.status != ModelStatus.downloading)
+                    const SizedBox(height: 24),
+                  if (modelService.state.status == ModelStatus.downloading) ...[
                     _buildDownloadSection(context, modelService),
+                    const SizedBox(height: 24),
+                  ],
                   if (modelService.state.status == ModelStatus.notDownloaded)
                     _buildDownloadPromptSection(context, modelService),
                   if (modelService.isModelReady)
@@ -134,6 +139,7 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
       downloadedBytes: (modelService.downloadProgress * 
           (modelService.modelInfo?.sizeBytes ?? 0)).round(),
       totalBytes: modelService.modelInfo?.sizeBytes ?? 0,
+      statusMessage: modelService.downloadStatus.isNotEmpty ? modelService.downloadStatus : null,
       onCancel: () => modelService.cancelDownload(),
     );
   }
@@ -409,44 +415,6 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
   }
 
   Future<void> _startDownload(BuildContext context, EmbeddedModelService modelService) async {
-    // Check HuggingFace token configuration first
-    final appState = Provider.of<AppState>(context, listen: false);
-    final settings = appState.settings;
-    
-    if (settings?.isHuggingFaceConfigured != true) {
-      if (context.mounted) {
-        final shouldGoToSettings = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('需要配置 HuggingFace Token'),
-            content: const Text(
-              '为了从 HuggingFace 下载 Gemma 模型，需要先配置访问令牌 (Access Token)。\n\n'
-              '没有 token 将使用模拟下载创建示例文件，但无法进行真实的植物识别。\n\n'
-              '是否前往设置页面配置 token？'
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('使用模拟模式'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('前往设置'),
-              ),
-            ],
-          ),
-        );
-        
-        if (shouldGoToSettings == true && context.mounted) {
-          Navigator.pushNamed(context, '/settings');
-          return;
-        }
-      }
-    } else {
-      // Update token in model service if configured
-      modelService.updateHuggingFaceToken(settings!.huggingfaceToken);
-    }
-
     await modelService.downloadModel();
   }
 

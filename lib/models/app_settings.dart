@@ -9,7 +9,6 @@ class AppSettings {
   final bool enableLocalRecognition;
   final RecognitionMethod preferredRecognitionMethod;
   final List<RecognitionMethod> recognitionMethodFallbackOrder;
-  final String? huggingfaceToken;
 
   AppSettings({
     this.baseUrl,
@@ -24,7 +23,6 @@ class AppSettings {
       RecognitionMethod.local,
       RecognitionMethod.cloud,
     ],
-    this.huggingfaceToken,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -51,7 +49,6 @@ class AppSettings {
               RecognitionMethod.local,
               RecognitionMethod.cloud,
             ],
-      huggingfaceToken: json['huggingface_token'] as String?,
     );
   }
 
@@ -65,7 +62,6 @@ class AppSettings {
       'enable_local_recognition': enableLocalRecognition,
       'preferred_recognition_method': preferredRecognitionMethod.name,
       'recognition_method_fallback_order': recognitionMethodFallbackOrder.map((e) => e.name).toList(),
-      'huggingface_token': huggingfaceToken,
     };
   }
 
@@ -78,7 +74,6 @@ class AppSettings {
     bool? enableLocalRecognition,
     RecognitionMethod? preferredRecognitionMethod,
     List<RecognitionMethod>? recognitionMethodFallbackOrder,
-    String? huggingfaceToken,
   }) {
     return AppSettings(
       baseUrl: baseUrl ?? this.baseUrl,
@@ -89,7 +84,6 @@ class AppSettings {
       enableLocalRecognition: enableLocalRecognition ?? this.enableLocalRecognition,
       preferredRecognitionMethod: preferredRecognitionMethod ?? this.preferredRecognitionMethod,
       recognitionMethodFallbackOrder: recognitionMethodFallbackOrder ?? this.recognitionMethodFallbackOrder,
-      huggingfaceToken: huggingfaceToken ?? this.huggingfaceToken,
     );
   }
 
@@ -97,7 +91,4 @@ class AppSettings {
     return baseUrl?.isNotEmpty == true && apiKey?.isNotEmpty == true;
   }
 
-  bool get isHuggingFaceConfigured {
-    return huggingfaceToken?.isNotEmpty == true;
-  }
 }

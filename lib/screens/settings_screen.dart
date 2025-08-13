@@ -10,7 +10,8 @@ import '../services/huggingface_client.dart';
 import '../widgets/copyable_error_message.dart';
 import '../models/privacy_policy.dart';
 import '../services/privacy_service.dart';
-import 'mnn_chat_test_screen.dart';
+import 'mnn_chat_config_screen.dart';
+import 'cloud_service_config_screen.dart';
 import 'policy_detail_screen.dart';
 import 'privacy_consent_screen.dart';
 
@@ -24,36 +25,22 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late AppSettings _settings;
   final _formKey = GlobalKey<FormState>();
-  final _baseUrlController = TextEditingController();
-  final _apiKeyController = TextEditingController();
-  final RecognitionService _recognitionService = RecognitionService();
-  bool _isApiKeyVisible = false;
 
   @override
   void initState() {
     super.initState();
     final appState = Provider.of<AppState>(context, listen: false);
     _settings = appState.settings ?? AppSettings();
-    _baseUrlController.text = _settings.baseUrl ?? '';
-    _apiKeyController.text = _settings.apiKey ?? '';
   }
 
   @override
   void dispose() {
-    _baseUrlController.dispose();
-    _apiKeyController.dispose();
     super.dispose();
   }
 
   Future<void> _autoSaveSettings() async {
     final appState = Provider.of<AppState>(context, listen: false);
-    
-    final updatedSettings = _settings.copyWith(
-      baseUrl: _baseUrlController.text.isEmpty ? null : _baseUrlController.text,
-      apiKey: _apiKeyController.text.isEmpty ? null : _apiKeyController.text,
-    );
-
-    await appState.updateSettings(updatedSettings);
+    await appState.updateSettings(_settings);
   }
 
   void _onSettingChanged() {
@@ -64,6 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -80,117 +68,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // 应用内AI模型管理
             _buildEmbeddedModelSection(),
             const SizedBox(height: 16),
-            
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '识别服务',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: _testConnection,
-                          icon: const Icon(Icons.wifi_find, size: 18),
-                          label: const Text('测试连接'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            textStyle: const TextStyle(fontSize: 14),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    SwitchListTile(
-                      title: const Text('本地识别'),
-                      subtitle: const Text('使用本地MNN Chat API进行植物识别'),
-                      value: _settings.enableLocalRecognition,
-                      onChanged: (value) {
-                        setState(() {
-                          _settings = _settings.copyWith(enableLocalRecognition: value);
-                        });
-                        _onSettingChanged();
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _baseUrlController,
-                      decoration: const InputDecoration(
-                        labelText: 'API地址',
-                        hintText: '输入识别服务的API地址',
-                        helperText: ' ', // 预留错误信息空间
-                      ),
-                      onChanged: (value) {
-                        _onSettingChanged();
-                      },
-                      validator: (value) {
-                        if (_settings.enableLocalRecognition && (value == null || value.isEmpty)) {
-                          return '本地识别需要配置API地址';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _apiKeyController,
-                      decoration: InputDecoration(
-                        labelText: 'API密钥',
-                        hintText: '输入您的API密钥',
-                        helperText: ' ', // 预留错误信息空间
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _isApiKeyVisible ? Icons.visibility_off : Icons.visibility,
-                            color: Colors.grey[600],
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _isApiKeyVisible = !_isApiKeyVisible;
-                            });
-                          },
-                          tooltip: _isApiKeyVisible ? '隐藏密钥' : '显示密钥',
-                        ),
-                      ),
-                      obscureText: !_isApiKeyVisible,
-                      onChanged: (value) {
-                        _onSettingChanged();
-                      },
-                      validator: (value) {
-                        if (_settings.enableLocalRecognition && (value == null || value.isEmpty)) {
-                          return '本地识别需要配置API密钥';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 40, // 固定高度避免布局变化
-                      child: Align(
-                        alignment: Alignment.topLeft,
-                        child: Text(
-                          _settings.enableLocalRecognition 
-                              ? '本地识别需要配置MNN Chat API地址和密钥'
-                              : '支持MNN Chat或其他植物识别API服务',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // MNN Chat服务
+            _buildMNNChatServiceSection(),
             const SizedBox(height: 16),
-            // HuggingFace Token 配置
-            _buildHuggingFaceSection(),
-            const SizedBox(height: 16),
-            // 识别模型设置
-            _buildRecognitionMethodSection(),
+            // 云端服务
+            _buildCloudServiceSection(),
             const SizedBox(height: 16),
             Card(
               child: Padding(
@@ -235,49 +117,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         });
                         _onSettingChanged();
                       },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // MNN Chat 测试区域
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'MNN Chat 测试',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '测试MNN Chat连接状态和植物识别功能，查看详细日志和识别结果',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => MNNChatTestScreen(
-                                appSettings: _settings,
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.science),
-                        label: const Text('打开 MNN Chat 测试页面'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.all(12),
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -524,60 +363,164 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _testConnection() async {
-    if (!_formKey.currentState!.validate()) {
-      ErrorSnackBar.show(
-        context,
-        message: '请先填写必要配置信息',
-        title: '配置错误',
-      );
-      return;
-    }
-
-    if (!_settings.enableLocalRecognition) {
-      ErrorSnackBar.show(
-        context,
-        message: '请先启用本地识别',
-        title: '配置错误',
-      );
-      return;
-    }
-
-    setState(() {
-      _settings = _settings.copyWith(
-        baseUrl: _baseUrlController.text.isEmpty ? null : _baseUrlController.text,
-        apiKey: _apiKeyController.text.isEmpty ? null : _apiKeyController.text,
-      );
-    });
-
-    // 显示测试中提示
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('正在测试连接...'),
-        duration: Duration(seconds: 1),
+  Widget _buildMNNChatServiceSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.computer,
+                  color: Theme.of(context).primaryColor,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'MNN Chat服务',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                _buildServiceStatusChip(_settings.enableLocalRecognition),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '使用本地MNN Chat API进行隐私安全的植物识别',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(
+                  _settings.enableLocalRecognition ? Icons.check_circle : Icons.radio_button_unchecked,
+                  size: 16,
+                  color: _settings.enableLocalRecognition ? Colors.green : Colors.grey,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _settings.enableLocalRecognition ? '已启用，可进行本地识别' : '未启用，点击下方按钮进行配置',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const MNNChatConfigScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.settings),
+                label: const Text('配置 MNN Chat 服务'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
 
-    // 初始化识别服务进行测试
-    _recognitionService.updateSettings(_settings);
-    final isConnected = await _recognitionService.testConnection(_settings);
+  Widget _buildCloudServiceSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.cloud,
+                  color: Theme.of(context).primaryColor,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '云端服务',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                _buildServiceStatusChip(false), // 临时设为false，后续可以添加专门的云端开关
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '连接云端API进行高精度植物识别，支持多种服务商',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(
+                  Icons.radio_button_unchecked,
+                  size: 16,
+                  color: Colors.grey,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '未配置，点击下方按钮进行配置',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const CloudServiceConfigScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.settings),
+                label: const Text('配置云端服务'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-    if (mounted) {
-      if (isConnected) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('连接测试成功！'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ErrorSnackBar.show(
-          context,
-          message: '连接测试失败，请检查配置',
-          title: '连接错误',
-        );
-      }
+  Widget _buildServiceStatusChip(bool enabled) {
+    Color backgroundColor;
+    Color textColor;
+    String text;
+
+    if (enabled) {
+      backgroundColor = Colors.green.shade100;
+      textColor = Colors.green.shade700;
+      text = '已启用';
+    } else {
+      backgroundColor = Colors.grey.shade100;
+      textColor = Colors.grey.shade700;
+      text = '未配置';
     }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
   }
 
   Widget _buildEmbeddedModelSection() {
@@ -718,541 +661,5 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Widget _buildRecognitionMethodSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.smart_toy,
-                  color: Theme.of(context).primaryColor,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '识别方法设置',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '选择默认的植物识别方法和失败时的备用方法顺序',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // 首选识别方法
-            Text(
-              '首选识别方法',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildRecognitionMethodDropdown(),
-            const SizedBox(height: 16),
-            
-            // 识别方法状态
-            Text(
-              '识别方法状态',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildRecognitionMethodStatus(),
-            const SizedBox(height: 16),
-            
-            // 回退顺序设置
-            Text(
-              '回退顺序',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '当首选方法失败时，将按以下顺序尝试其他方法',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildFallbackOrderList(),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildRecognitionMethodDropdown() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<RecognitionMethod>(
-          value: _settings.preferredRecognitionMethod,
-          isExpanded: true,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          items: RecognitionMethod.values
-              .where((method) => method != RecognitionMethod.manual)
-              .map((method) => DropdownMenuItem<RecognitionMethod>(
-                    value: method,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              _getMethodIcon(method),
-                              size: 18,
-                              color: _isMethodCurrentlyAvailable(method) 
-                                  ? Colors.green 
-                                  : Colors.grey,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(method.displayName),
-                            const Spacer(),
-                            if (!_isMethodCurrentlyAvailable(method))
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '不可用',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          method.description,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ))
-              .toList(),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _settings = _settings.copyWith(preferredRecognitionMethod: value);
-              });
-              _onSettingChanged();
-            }
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecognitionMethodStatus() {
-    final status = _recognitionService.getRecognitionMethodsStatus(_settings);
-    
-    return Column(
-      children: [
-        _buildMethodStatusTile(
-          RecognitionMethod.embedded,
-          status['embedded_model']['available'] as bool,
-          _getEmbeddedModelStatusText(status['embedded_model']),
-        ),
-        _buildMethodStatusTile(
-          RecognitionMethod.local,
-          status['mnn_chat']['available'] as bool,
-          status['mnn_chat']['available'] as bool ? 'MNN Chat已就绪' : 'MNN Chat未启动',
-        ),
-        _buildMethodStatusTile(
-          RecognitionMethod.cloud,
-          status['cloud']['configured'] as bool,
-          status['cloud']['configured'] as bool ? '云端API已配置' : '云端API未配置',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMethodStatusTile(RecognitionMethod method, bool available, String statusText) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      dense: true,
-      leading: Icon(
-        _getMethodIcon(method),
-        size: 20,
-        color: available ? Colors.green : Colors.grey,
-      ),
-      title: Text(
-        method.displayName,
-        style: Theme.of(context).textTheme.bodyMedium,
-      ),
-      subtitle: Text(
-        statusText,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: available ? Colors.green.shade700 : Colors.grey.shade600,
-        ),
-      ),
-      trailing: Icon(
-        available ? Icons.check_circle : Icons.error_outline,
-        size: 18,
-        color: available ? Colors.green : Colors.grey,
-      ),
-    );
-  }
-
-  Widget _buildFallbackOrderList() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          for (int i = 0; i < _settings.recognitionMethodFallbackOrder.length; i++)
-            ListTile(
-              dense: true,
-              leading: CircleAvatar(
-                radius: 12,
-                backgroundColor: Theme.of(context).primaryColor,
-                child: Text(
-                  '${i + 1}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              title: Text(
-                _settings.recognitionMethodFallbackOrder[i].displayName,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                _settings.recognitionMethodFallbackOrder[i].description,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (i > 0)
-                    IconButton(
-                      icon: const Icon(Icons.keyboard_arrow_up),
-                      iconSize: 20,
-                      onPressed: () => _moveFallbackMethod(i, i - 1),
-                    ),
-                  if (i < _settings.recognitionMethodFallbackOrder.length - 1)
-                    IconButton(
-                      icon: const Icon(Icons.keyboard_arrow_down),
-                      iconSize: 20,
-                      onPressed: () => _moveFallbackMethod(i, i + 1),
-                    ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  IconData _getMethodIcon(RecognitionMethod method) {
-    switch (method) {
-      case RecognitionMethod.embedded:
-        return Icons.memory;
-      case RecognitionMethod.local:
-        return Icons.computer;
-      case RecognitionMethod.cloud:
-        return Icons.cloud;
-      case RecognitionMethod.hybrid:
-        return Icons.auto_awesome;
-      case RecognitionMethod.manual:
-        return Icons.edit;
-    }
-  }
-
-  bool _isMethodCurrentlyAvailable(RecognitionMethod method) {
-    return _recognitionService.isMethodAvailable(method);
-  }
-
-  String _getEmbeddedModelStatusText(Map<String, dynamic> status) {
-    if (status['available'] as bool) {
-      return '应用内模型已就绪';
-    } else {
-      final statusString = status['status'] as String?;
-      if (statusString?.contains('downloading') == true) {
-        return '正在下载模型...';
-      } else if (statusString?.contains('error') == true) {
-        return '模型加载错误';
-      } else {
-        return '模型未下载';
-      }
-    }
-  }
-
-  void _moveFallbackMethod(int fromIndex, int toIndex) {
-    setState(() {
-      final newOrder = List<RecognitionMethod>.from(_settings.recognitionMethodFallbackOrder);
-      final method = newOrder.removeAt(fromIndex);
-      newOrder.insert(toIndex, method);
-      _settings = _settings.copyWith(recognitionMethodFallbackOrder: newOrder);
-    });
-    _onSettingChanged();
-  }
-
-  Widget _buildHuggingFaceSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.download,
-                  color: Theme.of(context).primaryColor,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '模型下载配置',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '配置 HuggingFace Access Token 以下载 Gemma 3n LiteRT 模型',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // HuggingFace Token 输入框
-            TextFormField(
-              initialValue: _settings.huggingfaceToken,
-              decoration: InputDecoration(
-                labelText: 'HuggingFace Access Token',
-                hintText: 'hf_xxxxxxxxxxxx',
-                prefixIcon: const Icon(Icons.key),
-                suffixIcon: _settings.isHuggingFaceConfigured 
-                    ? const Icon(Icons.check_circle, color: Colors.green)
-                    : const Icon(Icons.error_outline, color: Colors.grey),
-                border: const OutlineInputBorder(),
-                helperText: _settings.isHuggingFaceConfigured 
-                    ? '✅ Token 已配置' 
-                    : '需要 HuggingFace token 才能下载模型',
-                helperStyle: TextStyle(
-                  color: _settings.isHuggingFaceConfigured ? Colors.green : Colors.orange,
-                ),
-              ),
-              obscureText: true,
-              onChanged: (value) {
-                setState(() {
-                  _settings = _settings.copyWith(huggingfaceToken: value.trim());
-                });
-                _onSettingChanged();
-              },
-            ),
-            const SizedBox(height: 12),
-            
-            // 帮助说明
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '如何获取 HuggingFace Access Token',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '1. 访问 huggingface.co 并创建账号\n'
-                    '2. 进入 Settings → Access Tokens\n'
-                    '3. 点击"New token"，选择"Read"权限\n'
-                    '4. 访问 google/gemma-3n-E4B-it-litert-preview 模型页面\n'
-                    '5. 点击"Agree and access repository"接受许可证\n'
-                    '6. 复制生成的 token (以hf_开头)',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.amber.shade200),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.warning_amber,
-                          size: 16,
-                          color: Colors.amber.shade700,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '重要: 必须先在 HuggingFace 网站上接受 Gemma 模型的使用条款，否则会出现 403 错误',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.amber.shade700,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      TextButton.icon(
-                        onPressed: () => _launchUrl('https://huggingface.co/google/gemma-3n-E4B-it-litert-preview'),
-                        icon: const Icon(Icons.open_in_new, size: 16),
-                        label: const Text('访问模型页面'),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      TextButton.icon(
-                        onPressed: _testHuggingFaceConnection,
-                        icon: const Icon(Icons.network_check, size: 16),
-                        label: const Text('测试连接'),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _launchUrl(String url) async {
-    try {
-      // 这里应该使用 url_launcher 包，但为了简化，我们先用系统方法
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('请在浏览器中访问: $url'),
-          duration: const Duration(seconds: 5),
-          action: SnackBarAction(
-            label: '复制链接',
-            onPressed: () {
-              // 这里应该实现复制到剪贴板功能
-            },
-          ),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('无法打开链接: $e')),
-      );
-    }
-  }
-
-  Future<void> _testHuggingFaceConnection() async {
-    if (!_settings.isHuggingFaceConfigured) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先配置 HuggingFace Access Token')),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('正在测试连接...')),
-    );
-
-    try {
-      final token = _settings.huggingfaceToken!;
-      
-      // 先检查 token 格式
-      if (!token.startsWith('hf_') || token.length < 20) {
-        throw Exception('Token 格式不正确，应该以 hf_ 开头且长度足够');
-      }
-
-      // 创建 HuggingFace 客户端测试连接
-      final testClient = HuggingFaceClient(accessToken: token);
-      final isConnected = await testClient.testConnection();
-      
-      if (isConnected) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('✅ HuggingFace 连接测试成功！可以开始下载模型'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: '前往下载',
-              onPressed: () {
-                Navigator.pushNamed(context, '/embedded-model');
-              },
-            ),
-          ),
-        );
-      } else {
-        throw Exception('无法连接到 HuggingFace API，请检查网络或 token 权限');
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ 连接测试失败: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-          action: SnackBarAction(
-            label: '确定',
-            onPressed: () {},
-          ),
-        ),
-      );
-    }
-  }
 }

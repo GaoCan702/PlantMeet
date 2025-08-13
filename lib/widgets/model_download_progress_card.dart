@@ -6,6 +6,7 @@ class ModelDownloadProgressCard extends StatelessWidget {
   final ModelSource? currentSource;
   final int downloadedBytes;
   final int totalBytes;
+  final String? statusMessage;
   final VoidCallback? onCancel;
 
   const ModelDownloadProgressCard({
@@ -14,6 +15,7 @@ class ModelDownloadProgressCard extends StatelessWidget {
     this.currentSource,
     required this.downloadedBytes,
     required this.totalBytes,
+    this.statusMessage,
     this.onCancel,
   });
 
@@ -50,6 +52,15 @@ class ModelDownloadProgressCard extends StatelessWidget {
             _buildProgressIndicator(context),
             const SizedBox(height: 12),
             _buildProgressDetails(context),
+            if (statusMessage != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                statusMessage!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             _buildDownloadSource(context),
           ],
