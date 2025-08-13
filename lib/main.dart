@@ -7,26 +7,60 @@ import 'screens/plant_detail_screen.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/error_demo_screen.dart';
+import 'screens/embedded_model_manager_screen.dart';
 import 'services/app_state.dart';
 import 'services/database_service.dart';
 import 'services/database.dart';
 import 'services/onboarding_service.dart';
+import 'services/embedded_model_service.dart';
+import 'services/model_storage_manager.dart';
+import 'services/device_capability_detector.dart';
+import 'services/modelscope_client.dart';
+import 'services/huggingface_client.dart';
+import 'services/model_downloader.dart';
+import 'services/gemma_inference_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // 初始化数据库服务
   final database = AppDatabase();
   final databaseService = DatabaseService(database);
+  
+  // 初始化应用内模型服务
+  final storageManager = ModelStorageManager();
+  final capabilityDetector = DeviceCapabilityDetector();
+  final modelScopeClient = ModelScopeClient();
+  final huggingFaceClient = HuggingFaceClient(); // 添加 HuggingFace 客户端
+  final downloader = ModelDownloader(storageManager, modelScopeClient, huggingFaceClient); // 更新构造函数
+  final inferenceService = GemmaInferenceService(storageManager, capabilityDetector);
+  final embeddedModelService = EmbeddedModelService(
+    storageManager: storageManager,
+    capabilityDetector: capabilityDetector,
+    modelScopeClient: modelScopeClient,
+    huggingFaceClient: huggingFaceClient, // 添加 HuggingFace 客户端
+    downloader: downloader,
+    inferenceService: inferenceService,
+  );
+  
+  // 初始化应用状态
   final appState = AppState(databaseService: databaseService);
   
-  await appState.initialize();
+  // 并行初始化服务
+  await Future.wait([
+    appState.initialize(),
+    embeddedModelService.initialize(),
+  ]);
   
   // 检查是否显示新手引导
   final hasSeenOnboarding = await OnboardingService.hasSeenOnboarding();
   
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => appState,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => appState),
+        ChangeNotifierProvider(create: (context) => embeddedModelService),
+      ],
       child: PlantMeetApp(hasSeenOnboarding: hasSeenOnboarding),
     ),
   );
@@ -85,6 +119,7 @@ class PlantMeetApp extends StatelessWidget {
         '/gallery': (context) => const GalleryScreen(),
         '/onboarding': (context) => const OnboardingScreen(),
         '/error-demo': (context) => const ErrorDemoScreen(),
+        '/embedded-model-manager': (context) => const EmbeddedModelManagerScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/plant-detail') {

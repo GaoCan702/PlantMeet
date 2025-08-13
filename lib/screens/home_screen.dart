@@ -52,24 +52,40 @@ class HomeScreen extends StatelessWidget {
           final speciesWithEncounters = appState.getSpeciesWithEncounters();
           
           if (speciesWithEncounters.isEmpty) {
-            return Center(
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // 使用 Flexible 来控制上方空间，让内容更居中偏上
+                  const Flexible(
+                    flex: 2,
+                    child: SizedBox(),
+                  ),
                   Icon(
                     Icons.eco,
                     size: 80,
                     color: Colors.grey[400],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   Text(
                     '还没有植物记录',
-                    style: Theme.of(context).textTheme.headlineSmall,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Text(
                     '点击右下角按钮开始识别植物',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  // 使用更大的 flex 让底部空间更多，整体视觉向上偏移
+                  const Flexible(
+                    flex: 3,
+                    child: SizedBox(),
                   ),
                 ],
               ),

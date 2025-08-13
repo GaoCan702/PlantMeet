@@ -1,0 +1,31 @@
+{
+    "hidden_size": 2048,
+    "layer_nums": 36,
+    "attention_mask": "float",
+    "key_value_shape": [
+        2,
+        1,
+        0,
+        2,
+        128
+    ],
+    "bos": "",
+    "system_prompt_template": "<|im_start|>system\n%s<|im_end|>\n",
+    "user_prompt_template": "<|im_start|>user\n%s<|im_end|>\n",
+    "assistant_prompt_template": "<|im_start|>assistant\n%s<|im_end|>\n",
+    "is_visual": true,
+    "image_mean": [
+        122.7709383,
+        116.7460125,
+        104.09373615000001
+    ],
+    "image_norm": [
+        0.01459842661924292,
+        0.015007768493717056,
+        0.014220065717024088
+    ],
+    "image_size": 420,
+    "vision_start": 151652,
+    "vision_end": 151653,
+    "image_pad": 151655
+}

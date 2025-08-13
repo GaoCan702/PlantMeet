@@ -175,9 +175,11 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
                 ),
                 blockquoteDecoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
-                  borderLeft: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 4,
+                  border: Border(
+                    left: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 4,
+                    ),
                   ),
                 ),
                 tableHead: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -229,7 +231,7 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
       // 底部信息栏
       bottomSheet: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
           border: Border(

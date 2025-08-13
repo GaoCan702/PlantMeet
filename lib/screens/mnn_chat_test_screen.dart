@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'dart:convert';
 import '../services/mnn_chat_service.dart';
 import '../services/test_image_manager.dart';
 import '../models/app_settings.dart';
@@ -599,7 +598,12 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
   /// 连接状态页面
   Widget _buildConnectionTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.fromLTRB(
+        16.0,
+        16.0,
+        16.0,
+        16.0 + MediaQuery.of(context).padding.bottom,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -686,7 +690,12 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
   /// 图片测试页面
   Widget _buildImageTestTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.fromLTRB(
+        16.0,
+        16.0,
+        16.0,
+        16.0 + MediaQuery.of(context).padding.bottom,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

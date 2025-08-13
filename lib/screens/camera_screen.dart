@@ -45,10 +45,9 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _takePicture() async {
-    // 检查是否已配置识别服务
-    final appState = Provider.of<AppState>(context, listen: false);
-    if (!appState.isConfigured) {
-      _showConfigRequiredDialog();
+    // 检查是否有可用的识别服务
+    if (!_hasAvailableRecognitionMethod()) {
+      _showRecognitionServiceRequiredDialog();
       return;
     }
     
@@ -74,10 +73,9 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _pickFromGallery() async {
-    // 检查是否已配置识别服务
-    final appState = Provider.of<AppState>(context, listen: false);
-    if (!appState.isConfigured) {
-      _showConfigRequiredDialog();
+    // 检查是否有可用的识别服务
+    if (!_hasAvailableRecognitionMethod()) {
+      _showRecognitionServiceRequiredDialog();
       return;
     }
     
@@ -148,6 +146,48 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
+  bool _hasAvailableRecognitionMethod() {
+    final availableMethods = _recognitionService.getAvailableMethods();
+    final appState = Provider.of<AppState>(context, listen: false);
+    final settings = appState.settings ?? AppSettings();
+    
+    // 检查是否有至少一个可用的识别方法
+    return availableMethods.any((method) => 
+      method == RecognitionMethod.embedded && _recognitionService.isMethodAvailable(method) ||
+      method == RecognitionMethod.local && _recognitionService.isMethodAvailable(method) ||
+      method == RecognitionMethod.cloud && settings.isConfigured
+    );
+  }
+
+  void _showRecognitionServiceRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('需要配置识别服务'),
+        content: const Text(
+          '当前没有可用的植物识别服务。请：\n\n'
+          '• 下载应用内AI模型进行离线识别\n'
+          '• 启动MNN Chat进行本地识别\n'
+          '• 配置云端API密钥\n\n'
+          '至少需要配置一种方法才能进行植物识别。'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/settings');
+            },
+            child: const Text('去设置'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showError(String message) {
     ErrorSnackBar.show(
       context,
@@ -191,8 +231,8 @@ class _CameraScreenState extends State<CameraScreen> {
       final appState = Provider.of<AppState>(context, listen: false);
       final settings = appState.settings ?? AppSettings();
       
-      if (!settings.isConfigured) {
-        _showError('请先在设置中配置识别服务');
+      if (!_hasAvailableRecognitionMethod()) {
+        _showError('当前没有可用的识别服务，请在设置中配置或启用识别方法');
         return;
       }
 
@@ -209,17 +249,19 @@ class _CameraScreenState extends State<CameraScreen> {
         return;
       }
 
-      final topResult = response.topResults.first;
+      final topResult = response.results.first;
       final now = DateTime.now();
       
       // 创建或获取植物物种
       final species = PlantSpecies(
-        id: topResult.speciesId,
-        scientificName: topResult.scientificName,
-        commonName: topResult.commonName,
+        id: topResult.id,
+        scientificName: topResult.scientificName ?? 'Unknown',
+        commonName: topResult.name,
         description: topResult.description,
-        isToxic: topResult.isToxic,
-        toxicityInfo: topResult.toxicityInfo,
+        isToxic: topResult.safety.level == SafetyLevel.toxic,
+        toxicityInfo: topResult.safety.warnings.isNotEmpty 
+            ? topResult.safety.warnings.first 
+            : null,
         createdAt: now,
         updatedAt: now,
       );
@@ -241,7 +283,7 @@ class _CameraScreenState extends State<CameraScreen> {
       // 智能保存到数据库（自动去重）
       await appState.addRecognitionResult(species, encounter);
       
-      _showSuccess('识别完成！已识别为: ${topResult.commonName}');
+      _showSuccess('识别完成！已识别为: ${topResult.name}');
       Navigator.pop(context);
     } catch (e) {
       _showError('识别失败: $e');
@@ -401,39 +443,4 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  void _showConfigRequiredDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('需要配置识别服务'),
-        content: const Text(
-          '为了使用植物识别功能，您需要先配置识别服务。\n\n'
-          '请在设置中配置：\n'
-          '• API地址：识别服务的接口地址\n'
-          '• API密钥：您的身份验证密钥',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // 允许用户继续使用其他功能
-            },
-            child: const Text('稍后配置'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/settings');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('立即配置'),
-          ),
-        ],
-      ),
-    );
-  }
 }

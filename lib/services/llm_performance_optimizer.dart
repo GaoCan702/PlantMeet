@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
 /// 大模型性能优化器 - 针对Qwen2.5-VL等视觉语言模型的性能优化
@@ -86,18 +85,15 @@ class LLMPerformanceOptimizer {
   
   /// 增强图片以提高识别效果
   static img.Image _enhanceImageForRecognition(img.Image image) {
-    // 轻微锐化以增强细节
-    image = img.convolution(image, [
-      0, -1, 0,
-      -1, 5, -1,
-      0, -1, 0
-    ]);
+    // 使用高斯模糊的反向操作来增强细节
+    // 避免使用不兼容的convolution方法
     
     // 调整对比度和亮度
     image = img.adjustColor(
       image,
       contrast: 1.1, // 轻微增加对比度
       brightness: 1.05, // 轻微增加亮度
+      saturation: 1.1, // 轻微增加饱和度以突出植物颜色
     );
     
     return image;

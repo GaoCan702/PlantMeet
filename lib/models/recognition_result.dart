@@ -1,4 +1,4 @@
-import 'plant_encounter.dart';
+// import 'plant_encounter.dart'; // Removed unused import
 
 /// 生活化的植物识别结果 - 专注于实用信息
 class RecognitionResult {
@@ -249,7 +249,8 @@ class RecognitionResponse {
 
 /// 识别方法 - 用户友好的显示
 enum RecognitionMethod {
-  local,    // 本地识别
+  embedded, // 应用内模型识别
+  local,    // 本地识别 (MNN Chat)
   cloud,    // 云端识别
   hybrid,   // 混合识别
   manual,   // 手动输入
@@ -258,6 +259,8 @@ enum RecognitionMethod {
 extension RecognitionMethodExtension on RecognitionMethod {
   String get displayName {
     switch (this) {
+      case RecognitionMethod.embedded:
+        return '应用内AI识别';
       case RecognitionMethod.local:
         return '本地AI识别';
       case RecognitionMethod.cloud:
@@ -271,8 +274,10 @@ extension RecognitionMethodExtension on RecognitionMethod {
   
   String get description {
     switch (this) {
+      case RecognitionMethod.embedded:
+        return '使用应用内Gemma 3 Nano模型，完全离线，隐私安全';
       case RecognitionMethod.local:
-        return '使用本地AI模型，隐私安全，无需网络';
+        return '使用本地MNN Chat模型，隐私安全，无需网络';
       case RecognitionMethod.cloud:
         return '使用云端高精度模型，识别结果更准确';
       case RecognitionMethod.hybrid:

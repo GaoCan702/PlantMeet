@@ -69,6 +69,12 @@ This is a new Flutter project currently in the template stage. The actual implem
 - Android package ID: `com.arousedata.plantmeet`
 - Minimum SDK versions follow Flutter defaults
 
+### UI Layout Guidelines
+- **Bottom Safe Area**: Always handle system navigation bar overlap for pages with bottom buttons or important content
+- Use `EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom)` for bottom containers
+- Alternative: Use `SafeArea` widget for simpler cases
+- Test on devices with virtual navigation bars (Android) and home indicators (iOS)
+
 ### Testing
 - Place tests in the `test/` directory
 - Run tests with `flutter test`

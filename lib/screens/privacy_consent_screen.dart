@@ -167,7 +167,7 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 24.0 + MediaQuery.of(context).padding.bottom),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [

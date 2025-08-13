@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../models/recognition_result.dart';
-import 'llm_prompt_templates.dart';
 import 'llm_performance_optimizer.dart';
 
 /// MNN Chat API服务 - 专门适配MNN Chat本地部署的Qwen2.5-VL-3B模型

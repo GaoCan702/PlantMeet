@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/app_settings.dart';
+import '../models/embedded_model.dart';
+import '../models/recognition_result.dart';
 import '../services/app_state.dart';
 import '../services/recognition_service.dart';
+import '../services/embedded_model_service.dart';
+import '../services/huggingface_client.dart';
 import '../widgets/copyable_error_message.dart';
 import '../models/privacy_policy.dart';
 import '../services/privacy_service.dart';
@@ -71,8 +75,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           children: [
+            // 应用内AI模型管理
+            _buildEmbeddedModelSection(),
+            const SizedBox(height: 16),
+            
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -177,6 +185,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            // HuggingFace Token 配置
+            _buildHuggingFaceSection(),
+            const SizedBox(height: 16),
+            // 识别模型设置
+            _buildRecognitionMethodSection(),
             const SizedBox(height: 16),
             Card(
               child: Padding(
@@ -563,6 +577,682 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: '连接错误',
         );
       }
+    }
+  }
+
+  Widget _buildEmbeddedModelSection() {
+    return Consumer<EmbeddedModelService>(
+      builder: (context, modelService, child) {
+        final status = modelService.state.status;
+        final isReady = modelService.isModelReady;
+        final isDownloaded = modelService.isModelDownloaded;
+        
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.psychology,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '应用内AI模型',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    _buildModelStatusChip(status),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '下载Gemma 3n E4B LiteRT模型到应用内，实现完全离线的植物识别',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(
+                      isReady ? Icons.check_circle : (isDownloaded ? Icons.pending : Icons.cloud_download),
+                      size: 16,
+                      color: isReady 
+                          ? Colors.green 
+                          : (isDownloaded ? Colors.orange : Colors.grey),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _getModelStatusText(status),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.of(context).pushNamed('/embedded-model-manager'),
+                    icon: const Icon(Icons.settings),
+                    label: const Text('管理AI模型'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildModelStatusChip(ModelStatus status) {
+    Color backgroundColor;
+    Color textColor;
+    String text;
+
+    switch (status) {
+      case ModelStatus.ready:
+        backgroundColor = Colors.green.shade100;
+        textColor = Colors.green.shade700;
+        text = '就绪';
+        break;
+      case ModelStatus.downloaded:
+        backgroundColor = Colors.blue.shade100;
+        textColor = Colors.blue.shade700;
+        text = '已下载';
+        break;
+      case ModelStatus.downloading:
+        backgroundColor = Colors.orange.shade100;
+        textColor = Colors.orange.shade700;
+        text = '下载中';
+        break;
+      case ModelStatus.error:
+        backgroundColor = Colors.red.shade100;
+        textColor = Colors.red.shade700;
+        text = '错误';
+        break;
+      default:
+        backgroundColor = Colors.grey.shade100;
+        textColor = Colors.grey.shade700;
+        text = '未下载';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  String _getModelStatusText(ModelStatus status) {
+    switch (status) {
+      case ModelStatus.ready:
+        return '模型已就绪，可进行离线识别';
+      case ModelStatus.downloaded:
+        return '模型已下载，正在加载中...';
+      case ModelStatus.downloading:
+        return '正在下载模型，请稍候...';
+      case ModelStatus.loading:
+        return '正在加载模型，请稍候...';
+      case ModelStatus.error:
+        return '模型加载失败，请检查设备存储';
+      case ModelStatus.updating:
+        return '正在更新模型，请稍候...';
+      default:
+        return '点击"管理AI模型"下载离线识别模型';
+    }
+  }
+
+  Widget _buildRecognitionMethodSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.smart_toy,
+                  color: Theme.of(context).primaryColor,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '识别方法设置',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '选择默认的植物识别方法和失败时的备用方法顺序',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // 首选识别方法
+            Text(
+              '首选识别方法',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildRecognitionMethodDropdown(),
+            const SizedBox(height: 16),
+            
+            // 识别方法状态
+            Text(
+              '识别方法状态',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildRecognitionMethodStatus(),
+            const SizedBox(height: 16),
+            
+            // 回退顺序设置
+            Text(
+              '回退顺序',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '当首选方法失败时，将按以下顺序尝试其他方法',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildFallbackOrderList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecognitionMethodDropdown() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<RecognitionMethod>(
+          value: _settings.preferredRecognitionMethod,
+          isExpanded: true,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          items: RecognitionMethod.values
+              .where((method) => method != RecognitionMethod.manual)
+              .map((method) => DropdownMenuItem<RecognitionMethod>(
+                    value: method,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              _getMethodIcon(method),
+                              size: 18,
+                              color: _isMethodCurrentlyAvailable(method) 
+                                  ? Colors.green 
+                                  : Colors.grey,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(method.displayName),
+                            const Spacer(),
+                            if (!_isMethodCurrentlyAvailable(method))
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '不可用',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          method.description,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ))
+              .toList(),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                _settings = _settings.copyWith(preferredRecognitionMethod: value);
+              });
+              _onSettingChanged();
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecognitionMethodStatus() {
+    final status = _recognitionService.getRecognitionMethodsStatus(_settings);
+    
+    return Column(
+      children: [
+        _buildMethodStatusTile(
+          RecognitionMethod.embedded,
+          status['embedded_model']['available'] as bool,
+          _getEmbeddedModelStatusText(status['embedded_model']),
+        ),
+        _buildMethodStatusTile(
+          RecognitionMethod.local,
+          status['mnn_chat']['available'] as bool,
+          status['mnn_chat']['available'] as bool ? 'MNN Chat已就绪' : 'MNN Chat未启动',
+        ),
+        _buildMethodStatusTile(
+          RecognitionMethod.cloud,
+          status['cloud']['configured'] as bool,
+          status['cloud']['configured'] as bool ? '云端API已配置' : '云端API未配置',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMethodStatusTile(RecognitionMethod method, bool available, String statusText) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      leading: Icon(
+        _getMethodIcon(method),
+        size: 20,
+        color: available ? Colors.green : Colors.grey,
+      ),
+      title: Text(
+        method.displayName,
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
+      subtitle: Text(
+        statusText,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: available ? Colors.green.shade700 : Colors.grey.shade600,
+        ),
+      ),
+      trailing: Icon(
+        available ? Icons.check_circle : Icons.error_outline,
+        size: 18,
+        color: available ? Colors.green : Colors.grey,
+      ),
+    );
+  }
+
+  Widget _buildFallbackOrderList() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          for (int i = 0; i < _settings.recognitionMethodFallbackOrder.length; i++)
+            ListTile(
+              dense: true,
+              leading: CircleAvatar(
+                radius: 12,
+                backgroundColor: Theme.of(context).primaryColor,
+                child: Text(
+                  '${i + 1}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              title: Text(
+                _settings.recognitionMethodFallbackOrder[i].displayName,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              subtitle: Text(
+                _settings.recognitionMethodFallbackOrder[i].description,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (i > 0)
+                    IconButton(
+                      icon: const Icon(Icons.keyboard_arrow_up),
+                      iconSize: 20,
+                      onPressed: () => _moveFallbackMethod(i, i - 1),
+                    ),
+                  if (i < _settings.recognitionMethodFallbackOrder.length - 1)
+                    IconButton(
+                      icon: const Icon(Icons.keyboard_arrow_down),
+                      iconSize: 20,
+                      onPressed: () => _moveFallbackMethod(i, i + 1),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getMethodIcon(RecognitionMethod method) {
+    switch (method) {
+      case RecognitionMethod.embedded:
+        return Icons.memory;
+      case RecognitionMethod.local:
+        return Icons.computer;
+      case RecognitionMethod.cloud:
+        return Icons.cloud;
+      case RecognitionMethod.hybrid:
+        return Icons.auto_awesome;
+      case RecognitionMethod.manual:
+        return Icons.edit;
+    }
+  }
+
+  bool _isMethodCurrentlyAvailable(RecognitionMethod method) {
+    return _recognitionService.isMethodAvailable(method);
+  }
+
+  String _getEmbeddedModelStatusText(Map<String, dynamic> status) {
+    if (status['available'] as bool) {
+      return '应用内模型已就绪';
+    } else {
+      final statusString = status['status'] as String?;
+      if (statusString?.contains('downloading') == true) {
+        return '正在下载模型...';
+      } else if (statusString?.contains('error') == true) {
+        return '模型加载错误';
+      } else {
+        return '模型未下载';
+      }
+    }
+  }
+
+  void _moveFallbackMethod(int fromIndex, int toIndex) {
+    setState(() {
+      final newOrder = List<RecognitionMethod>.from(_settings.recognitionMethodFallbackOrder);
+      final method = newOrder.removeAt(fromIndex);
+      newOrder.insert(toIndex, method);
+      _settings = _settings.copyWith(recognitionMethodFallbackOrder: newOrder);
+    });
+    _onSettingChanged();
+  }
+
+  Widget _buildHuggingFaceSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.download,
+                  color: Theme.of(context).primaryColor,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '模型下载配置',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '配置 HuggingFace Access Token 以下载 Gemma 3n LiteRT 模型',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // HuggingFace Token 输入框
+            TextFormField(
+              initialValue: _settings.huggingfaceToken,
+              decoration: InputDecoration(
+                labelText: 'HuggingFace Access Token',
+                hintText: 'hf_xxxxxxxxxxxx',
+                prefixIcon: const Icon(Icons.key),
+                suffixIcon: _settings.isHuggingFaceConfigured 
+                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    : const Icon(Icons.error_outline, color: Colors.grey),
+                border: const OutlineInputBorder(),
+                helperText: _settings.isHuggingFaceConfigured 
+                    ? '✅ Token 已配置' 
+                    : '需要 HuggingFace token 才能下载模型',
+                helperStyle: TextStyle(
+                  color: _settings.isHuggingFaceConfigured ? Colors.green : Colors.orange,
+                ),
+              ),
+              obscureText: true,
+              onChanged: (value) {
+                setState(() {
+                  _settings = _settings.copyWith(huggingfaceToken: value.trim());
+                });
+                _onSettingChanged();
+              },
+            ),
+            const SizedBox(height: 12),
+            
+            // 帮助说明
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '如何获取 HuggingFace Access Token',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '1. 访问 huggingface.co 并创建账号\n'
+                    '2. 进入 Settings → Access Tokens\n'
+                    '3. 点击"New token"，选择"Read"权限\n'
+                    '4. 访问 google/gemma-3n-E4B-it-litert-preview 模型页面\n'
+                    '5. 点击"Agree and access repository"接受许可证\n'
+                    '6. 复制生成的 token (以hf_开头)',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.amber.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.warning_amber,
+                          size: 16,
+                          color: Colors.amber.shade700,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '重要: 必须先在 HuggingFace 网站上接受 Gemma 模型的使用条款，否则会出现 403 错误',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.amber.shade700,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => _launchUrl('https://huggingface.co/google/gemma-3n-E4B-it-litert-preview'),
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text('访问模型页面'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: _testHuggingFaceConnection,
+                        icon: const Icon(Icons.network_check, size: 16),
+                        label: const Text('测试连接'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    try {
+      // 这里应该使用 url_launcher 包，但为了简化，我们先用系统方法
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('请在浏览器中访问: $url'),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: '复制链接',
+            onPressed: () {
+              // 这里应该实现复制到剪贴板功能
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('无法打开链接: $e')),
+      );
+    }
+  }
+
+  Future<void> _testHuggingFaceConnection() async {
+    if (!_settings.isHuggingFaceConfigured) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先配置 HuggingFace Access Token')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('正在测试连接...')),
+    );
+
+    try {
+      final token = _settings.huggingfaceToken!;
+      
+      // 先检查 token 格式
+      if (!token.startsWith('hf_') || token.length < 20) {
+        throw Exception('Token 格式不正确，应该以 hf_ 开头且长度足够');
+      }
+
+      // 创建 HuggingFace 客户端测试连接
+      final testClient = HuggingFaceClient(accessToken: token);
+      final isConnected = await testClient.testConnection();
+      
+      if (isConnected) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('✅ HuggingFace 连接测试成功！可以开始下载模型'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: '前往下载',
+              onPressed: () {
+                Navigator.pushNamed(context, '/embedded-model');
+              },
+            ),
+          ),
+        );
+      } else {
+        throw Exception('无法连接到 HuggingFace API，请检查网络或 token 权限');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ 连接测试失败: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: '确定',
+            onPressed: () {},
+          ),
+        ),
+      );
     }
   }
 }

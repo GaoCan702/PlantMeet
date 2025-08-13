@@ -345,6 +345,10 @@ class PDFExportService {
         return '本地识别';
       case RecognitionMethod.cloud:
         return '云端识别';
+      case RecognitionMethod.embedded:
+        return '内置模型';
+      case RecognitionMethod.hybrid:
+        return '智能识别';
       case RecognitionMethod.manual:
         return '手动添加';
     }

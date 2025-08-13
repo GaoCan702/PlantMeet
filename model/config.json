@@ -1,0 +1,15 @@
+{
+    "llm_model": "llm.mnn",
+    "llm_weight": "llm.mnn.weight",
+    "backend_type": "cpu",
+    "thread_num": 4,
+    "precision": "low",
+    "memory": "low",
+    "system_prompt": "You are a helpful assistant.",
+    "mllm": {
+        "backend_type": "cpu",
+        "thread_num": 4,
+        "precision": "normal",
+        "memory": "low"
+    }
+}

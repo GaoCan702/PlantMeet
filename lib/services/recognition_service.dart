@@ -4,11 +4,11 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/recognition_result.dart';
 import '../models/app_settings.dart';
-import '../models/plant_encounter.dart';
 import 'mock_recognition_service.dart';
 import 'mnn_chat_service.dart';
+import 'embedded_model_service.dart';
 
-/// 植物识别服务 - 支持本地大模型和云端识别的生活化植物识别
+/// 植物识别服务 - 支持应用内模型、MNN Chat和云端识别的生活化植物识别
 class RecognitionService {
   static const bool _useMockData = true; // 开发阶段使用模拟数据
   static const bool _preferLocalLLM = true; // 优先使用本地大模型
@@ -16,13 +16,43 @@ class RecognitionService {
   MNNChatService? _mnnChatService;
   bool _isMNNChatReady = false;
   
-  RecognitionService() {
-    _initializeMNNChat();
+  EmbeddedModelService? _embeddedModelService;
+  bool _isEmbeddedModelReady = false;
+  
+  RecognitionService({EmbeddedModelService? embeddedModelService}) {
+    _embeddedModelService = embeddedModelService;
+    _initializeServices();
   }
 
   void initialize(AppSettings settings) async {
-    // 初始化MNN Chat服务
-    await _initializeMNNChat();
+    // 初始化所有识别服务
+    await _initializeServices();
+  }
+  
+  /// 初始化所有识别服务
+  Future<void> _initializeServices() async {
+    await Future.wait([
+      _initializeEmbeddedModel(),
+      _initializeMNNChat(),
+    ]);
+  }
+  
+  /// 初始化应用内模型服务
+  Future<void> _initializeEmbeddedModel() async {
+    if (_embeddedModelService == null) return;
+    
+    try {
+      _isEmbeddedModelReady = _embeddedModelService!.isModelReady;
+      
+      if (_isEmbeddedModelReady) {
+        print('✅ 应用内 Gemma 3 Nano 4B 模型就绪');
+      } else {
+        print('⚠️ 应用内模型未就绪，状态: ${_embeddedModelService!.state.status}');
+      }
+    } catch (e) {
+      print('❌ 应用内模型检查异常: $e');
+      _isEmbeddedModelReady = false;
+    }
   }
   
   /// 初始化MNN Chat服务
@@ -51,7 +81,7 @@ class RecognitionService {
     // 简化更新逻辑
   }
 
-  /// 植物识别主入口 - 支持本地大模型和云端识别
+  /// 植物识别主入口 - 支持应用内模型、MNN Chat和云端识别
   Future<RecognitionResponse> identifyPlant(
     File imageFile, 
     AppSettings settings, {
@@ -59,35 +89,284 @@ class RecognitionService {
     String? season,
     String? location,
     bool quickMode = false,
+    RecognitionMethod? preferredMethod,
   }) async {
     // 开发阶段使用模拟数据演示
     if (_useMockData) {
       return await _getMockRecognitionResult(imageFile);
     }
     
-    // 优先尝试MNN Chat识别
-    if (_isMNNChatReady && _mnnChatService != null) {
-      final localResult = await _tryMNNChatRecognition(
+    // 根据用户偏好或自动选择识别方法，支持回退机制
+    final method = preferredMethod ?? settings.preferredRecognitionMethod;
+    
+    // 如果用户设置了智能识别，使用最佳可用方法
+    if (method == RecognitionMethod.hybrid) {
+      return await _hybridRecognition(imageFile, settings, userContext: userContext, season: season, location: location, quickMode: quickMode);
+    }
+    
+    // 尝试用户首选的方法，如果失败则按照设置的回退顺序尝试
+    final result = await _tryRecognitionWithFallback(
+      imageFile, 
+      settings, 
+      method, 
+      userContext: userContext,
+      season: season,
+      location: location,
+      quickMode: quickMode,
+    );
+    
+    return result;
+  }
+  
+  /// 混合识别模式 - 按优先级尝试各种方法
+  Future<RecognitionResponse> _hybridRecognition(
+    File imageFile, 
+    AppSettings settings, {
+    String? userContext,
+    String? season,
+    String? location,
+    bool quickMode = false,
+  }) async {
+    // 按照设置中的回退顺序尝试各种方法
+    for (final method in settings.recognitionMethodFallbackOrder) {
+      if (method == RecognitionMethod.hybrid || method == RecognitionMethod.manual) {
+        continue; // 跳过混合模式和手动模式
+      }
+      
+      final result = await _trySingleRecognitionMethod(
         imageFile,
+        settings,
+        method,
         userContext: userContext,
         season: season,
         location: location,
         quickMode: quickMode,
       );
       
-      if (localResult.success && localResult.results.isNotEmpty) {
-        return localResult;
+      if (result.success && result.results.isNotEmpty) {
+        return result;
       }
     }
     
-    // 本地识别不可用或失败，尝试云端识别
-    if (settings.isConfigured) {
-      return await _tryCloudRecognition(imageFile, settings);
+    // 如果所有方法都失败了，返回错误
+    return RecognitionResponse.error(
+      error: '所有配置的识别方法都无法使用，请检查设置或网络连接',
+      method: RecognitionMethod.hybrid,
+    );
+  }
+  
+  /// 使用回退机制尝试识别
+  Future<RecognitionResponse> _tryRecognitionWithFallback(
+    File imageFile,
+    AppSettings settings,
+    RecognitionMethod primaryMethod, {
+    String? userContext,
+    String? season,
+    String? location,
+    bool quickMode = false,
+    int maxRetries = 2,
+  }) async {
+    // 首先尝试主要方法
+    var result = await _trySingleRecognitionMethod(
+      imageFile,
+      settings,
+      primaryMethod,
+      userContext: userContext,
+      season: season,
+      location: location,
+      quickMode: quickMode,
+    );
+    
+    // 如果成功，直接返回
+    if (result.success && result.results.isNotEmpty) {
+      return result;
     }
     
+    // 如果主要方法失败，尝试重试（最多2次）
+    for (int retry = 0; retry < maxRetries; retry++) {
+      await Future.delayed(Duration(seconds: retry + 1));
+      result = await _trySingleRecognitionMethod(
+        imageFile,
+        settings,
+        primaryMethod,
+        userContext: userContext,
+        season: season,
+        location: location,
+        quickMode: quickMode,
+      );
+      
+      if (result.success && result.results.isNotEmpty) {
+        return result;
+      }
+    }
+    
+    // 如果重试后仍然失败，按照回退顺序尝试其他方法
+    final fallbackOrder = List<RecognitionMethod>.from(settings.recognitionMethodFallbackOrder);
+    fallbackOrder.remove(primaryMethod); // 移除已经尝试过的主要方法
+    fallbackOrder.removeWhere((method) => method == RecognitionMethod.hybrid || method == RecognitionMethod.manual);
+    
+    for (final method in fallbackOrder) {
+      final fallbackResult = await _trySingleRecognitionMethod(
+        imageFile,
+        settings,
+        method,
+        userContext: userContext,
+        season: season,
+        location: location,
+        quickMode: quickMode,
+      );
+      
+      if (fallbackResult.success && fallbackResult.results.isNotEmpty) {
+        return fallbackResult;
+      }
+    }
+    
+    // 所有方法都失败了
     return RecognitionResponse.error(
-      error: '无可用的识别服务，请启动MNN Chat或配置云端服务',
-      method: RecognitionMethod.local,
+      error: '主要识别方法失败，备用方法也无法使用。错误：${result.error}',
+      method: primaryMethod,
+    );
+  }
+  
+  /// 尝试单一识别方法
+  Future<RecognitionResponse> _trySingleRecognitionMethod(
+    File imageFile,
+    AppSettings settings,
+    RecognitionMethod method, {
+    String? userContext,
+    String? season,
+    String? location,
+    bool quickMode = false,
+  }) async {
+    switch (method) {
+      case RecognitionMethod.embedded:
+        if (_isEmbeddedModelReady) {
+          return await _tryEmbeddedModelRecognition(imageFile);
+        }
+        return RecognitionResponse.error(
+          error: '应用内模型未就绪',
+          method: RecognitionMethod.embedded,
+        );
+        
+      case RecognitionMethod.local:
+        if (_isMNNChatReady && _mnnChatService != null) {
+          return await _tryMNNChatRecognition(
+            imageFile,
+            userContext: userContext,
+            season: season,
+            location: location,
+            quickMode: quickMode,
+          );
+        }
+        return RecognitionResponse.error(
+          error: 'MNN Chat服务未就绪',
+          method: RecognitionMethod.local,
+        );
+        
+      case RecognitionMethod.cloud:
+        if (settings.isConfigured) {
+          return await _tryCloudRecognition(imageFile, settings);
+        }
+        return RecognitionResponse.error(
+          error: '云端识别未配置',
+          method: RecognitionMethod.cloud,
+        );
+        
+      case RecognitionMethod.manual:
+        return RecognitionResponse.error(
+          error: '手动模式不支持自动识别',
+          method: RecognitionMethod.manual,
+        );
+        
+      case RecognitionMethod.hybrid:
+        // 这种情况不应该发生，因为hybrid会被特殊处理
+        return RecognitionResponse.error(
+          error: '不支持在单一方法中调用混合模式',
+          method: RecognitionMethod.hybrid,
+        );
+    }
+  }
+  
+  /// 选择最佳识别方法（根据设置和可用性）
+  RecognitionMethod _selectBestMethod(AppSettings settings) {
+    // 按照设置的回退顺序找到第一个可用的方法
+    for (final method in settings.recognitionMethodFallbackOrder) {
+      if (isMethodAvailable(method)) {
+        return method;
+      }
+    }
+    
+    // 如果没有可用的方法，返回云端（总是可用，但需要配置）
+    return RecognitionMethod.cloud;
+  }
+  
+  /// 应用内模型识别（Gemma 3 Nano 4B）
+  Future<RecognitionResponse> _tryEmbeddedModelRecognition(File imageFile) async {
+    if (_embeddedModelService == null || !_isEmbeddedModelReady) {
+      return RecognitionResponse.error(
+        error: '应用内模型未就绪',
+        method: RecognitionMethod.embedded,
+      );
+    }
+    
+    try {
+      final startTime = DateTime.now();
+      final results = await _embeddedModelService!.recognizePlant(imageFile);
+      final inferenceTime = DateTime.now().difference(startTime);
+      
+      // 转换为生活化的RecognitionResult格式
+      final convertedResults = results.map((result) => _convertToLifestyleResult(result)).toList();
+      
+      // 添加应用内模型的特殊标识
+      for (final plant in convertedResults) {
+        plant.tags.add('应用内AI');
+        plant.tags.add('Gemma 3 Nano');
+        plant.tags.add('完全离线');
+      }
+      
+      return RecognitionResponse.success(
+        results: convertedResults,
+        method: RecognitionMethod.embedded,
+      );
+    } catch (e) {
+      return RecognitionResponse.error(
+        error: '应用内模型识别异常: $e',
+        method: RecognitionMethod.embedded,
+      );
+    }
+  }
+  
+  /// 将Gemma识别结果转换为生活化格式
+  RecognitionResult _convertToLifestyleResult(dynamic gemmaResult) {
+    // 这里假设gemmaResult是从Gemma推理服务返回的RecognitionResult
+    // 需要转换为生活化的RecognitionResult格式
+    
+    if (gemmaResult is RecognitionResult) {
+      // 如果已经是正确格式，直接返回
+      return gemmaResult;
+    }
+    
+    // 如果是其他格式，需要转换
+    // 这里提供一个基本的转换示例
+    return RecognitionResult(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: gemmaResult.commonName ?? '未知植物',
+      nickname: null,
+      confidence: gemmaResult.confidence ?? 0.5,
+      description: gemmaResult.description ?? '这是一种植物',
+      features: ['通过AI识别的特征'],
+      safety: SafetyInfo(
+        level: gemmaResult.isToxic == true ? SafetyLevel.toxic : SafetyLevel.safe,
+        description: gemmaResult.isToxic == true ? '该植物可能有毒，请小心接触' : '该植物相对安全',
+        warnings: gemmaResult.toxicityInfo != null ? [gemmaResult.toxicityInfo!] : [],
+      ),
+      care: null,
+      season: null,
+      locations: ['室内', '户外'],
+      funFact: null,
+      tags: ['AI识别'],
+      scientificName: gemmaResult.scientificName,
+      family: null,
     );
   }
   
@@ -336,10 +615,117 @@ class RecognitionService {
     }
   }
 
+  /// 获取识别方法状态
+  Map<String, dynamic> getRecognitionMethodsStatus([AppSettings? settings]) {
+    final result = {
+      'embedded_model': {
+        'available': _isEmbeddedModelReady,
+        'status': _embeddedModelService?.state.status.toString(),
+        'model_info': _embeddedModelService?.modelInfo?.toJson(),
+        'device_capability': _embeddedModelService?.deviceCapability?.additionalInfo,
+      },
+      'mnn_chat': {
+        'available': _isMNNChatReady,
+        'status': _mnnChatService?.getStatus(),
+      },
+      'cloud': {
+        'available': true, // 云端总是可用的，只要有配置
+        'configured': settings?.isConfigured ?? false,
+      },
+    };
+    
+    if (settings != null) {
+      result['settings'] = {
+        'preferred_method': settings.preferredRecognitionMethod.name,
+        'preferred_method_display': settings.preferredRecognitionMethod.displayName,
+        'fallback_order': settings.recognitionMethodFallbackOrder.map((e) => e.name).toList(),
+        'fallback_order_display': settings.recognitionMethodFallbackOrder.map((e) => e.displayName).toList(),
+        'recommended_method': _selectBestMethod(settings).toString(),
+      };
+    }
+    
+    return result;
+  }
+  
+  /// 刷新服务状态
+  Future<void> refreshStatus() async {
+    await _initializeServices();
+  }
+  
+  /// 获取可用的识别方法列表
+  List<RecognitionMethod> getAvailableMethods() {
+    final methods = <RecognitionMethod>[];
+    
+    if (_isEmbeddedModelReady) {
+      methods.add(RecognitionMethod.embedded);
+    }
+    
+    if (_isMNNChatReady) {
+      methods.add(RecognitionMethod.local);
+    }
+    
+    // 云端方法总是可用（如果配置了）
+    methods.add(RecognitionMethod.cloud);
+    
+    return methods;
+  }
+  
+  /// 检查特定方法是否可用
+  bool isMethodAvailable(RecognitionMethod method) {
+    switch (method) {
+      case RecognitionMethod.embedded:
+        return _isEmbeddedModelReady;
+      case RecognitionMethod.local:
+        return _isMNNChatReady;
+      case RecognitionMethod.cloud:
+        return true; // 云端总是可用（如果配置了）
+      case RecognitionMethod.hybrid:
+        return _isEmbeddedModelReady || _isMNNChatReady;
+      case RecognitionMethod.manual:
+        return true; // 手动输入总是可用
+    }
+  }
+  
+  /// 获取方法显示名称
+  String getMethodDisplayName(RecognitionMethod method) {
+    switch (method) {
+      case RecognitionMethod.embedded:
+        return '应用内AI模型';
+      case RecognitionMethod.local:
+        return 'MNN Chat (外部)';
+      case RecognitionMethod.cloud:
+        return '云端API';
+      case RecognitionMethod.hybrid:
+        return '智能识别';
+      case RecognitionMethod.manual:
+        return '手动输入';
+    }
+  }
+  
+  /// 获取方法描述
+  String getMethodDescription(RecognitionMethod method) {
+    switch (method) {
+      case RecognitionMethod.embedded:
+        return '使用设备内置的Gemma 3 Nano 4B模型，完全离线，隐私安全';
+      case RecognitionMethod.local:
+        return '通过MNN Chat应用使用本地Qwen2.5-VL-3B模型';
+      case RecognitionMethod.cloud:
+        return '使用云端API服务，需要网络连接和API密钥';
+      case RecognitionMethod.hybrid:
+        return '结合本地和云端模型，取长补短';
+      case RecognitionMethod.manual:
+        return '用户手动输入植物信息';
+    }
+  }
+
   void dispose() {
-    // 清理MNN Chat资源
+    // 清理资源
     _mnnChatService?.dispose();
     _mnnChatService = null;
     _isMNNChatReady = false;
+    
+    _embeddedModelService?.dispose();
+    _embeddedModelService = null;
+    _isEmbeddedModelReady = false;
   }
 }

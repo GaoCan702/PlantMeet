@@ -87,7 +87,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             
             // 底部按钮
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + MediaQuery.of(context).padding.bottom),
               child: Row(
                 children: [
                   if (_currentPage > 0)
