@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../models/embedded_model.dart';
 import '../services/embedded_model_service.dart';
@@ -29,6 +30,8 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeaderSection(context, modelService),
+                  const SizedBox(height: 24),
+                  _buildDownloadPolicySection(context),
                   const SizedBox(height: 24),
                   // 只在非下载状态时显示状态卡片，避免重复
                   if (modelService.state.status != ModelStatus.downloading)
@@ -121,6 +124,80 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
       label: Text(label, style: const TextStyle(fontSize: 12)),
       backgroundColor: color.withValues(alpha: 0.1),
       side: BorderSide(color: color.withValues(alpha: 0.3)),
+    );
+  }
+
+  Widget _buildDownloadPolicySection(BuildContext context) {
+    return FutureBuilder<SharedPreferences>(
+      future: SharedPreferences.getInstance(),
+      builder: (context, snapshot) {
+        final prefs = snapshot.data;
+        bool allowBackground = prefs?.getBool('allow_background_download') ?? false;
+        bool wifiOnly = prefs?.getBool('wifi_only_download') ?? true;
+        bool autoPauseLowBattery = prefs?.getBool('auto_pause_low_battery') ?? true;
+
+        void save() {
+          if (prefs != null) {
+            prefs.setBool('allow_background_download', allowBackground);
+            prefs.setBool('wifi_only_download', wifiOnly);
+            prefs.setBool('auto_pause_low_battery', autoPauseLowBattery);
+          }
+        }
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.tune, color: Theme.of(context).primaryColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '下载策略',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  title: const Text('允许后台继续下载模型'),
+                  subtitle: const Text('切到其他应用时继续下载'),
+                  value: allowBackground,
+                  onChanged: (v) {
+                    allowBackground = v;
+                    save();
+                    (context as Element).markNeedsBuild();
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('仅在 Wi‑Fi 下下载模型'),
+                  subtitle: const Text('移动网络时等待 Wi‑Fi'),
+                  value: wifiOnly,
+                  onChanged: (v) {
+                    wifiOnly = v;
+                    save();
+                    (context as Element).markNeedsBuild();
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('低电量时自动暂停下载'),
+                  subtitle: const Text('电量 ≤ 15% 且未充电时暂停'),
+                  value: autoPauseLowBattery,
+                  onChanged: (v) {
+                    autoPauseLowBattery = v;
+                    save();
+                    (context as Element).markNeedsBuild();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
