@@ -155,6 +155,32 @@ class GemmaInferenceService {
     }
   }
 
+  /// 多模态聊天（可选图片）。当未提供图片时使用占位图片，主要用于功能性测试。
+  Future<String> chat({
+    required String prompt,
+    File? imageFile,
+  }) async {
+    if (!_isModelLoaded || _gemmaPlugin == null) {
+      throw Exception('Model not initialized. Call initializeModel() first.');
+    }
+
+    try {
+      // 预处理图片：若无图片则使用占位图
+      final Uint8List imageBytes = imageFile != null
+          ? await _preprocessImage(imageFile)
+          : _createDummyImage();
+
+      final response = await _gemmaPlugin!.generateResponseWithImage(
+        prompt: prompt,
+        image: imageBytes,
+      );
+      return response;
+    } catch (e) {
+      _logger.e('Chat failed: $e');
+      rethrow;
+    }
+  }
+
   Future<Uint8List> _preprocessImage(File imageFile) async {
     try {
       // Read image

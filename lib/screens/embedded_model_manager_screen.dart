@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../models/embedded_model.dart';
@@ -384,9 +386,128 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            _buildLocalChatTester(context, modelService),
           ],
         ),
       ),
+    );
+  }
+
+  /// 在离线模型就绪时提供一个简易多模态聊天测试区块（文本+可选图片）
+  Widget _buildLocalChatTester(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) {
+    final promptController = TextEditingController(
+      text: '请用简洁的中文描述这张图片中的植物特征，并判断可能的物种。',
+    );
+    File? pickedImage;
+
+    Future<void> pickImage() async {
+      try {
+        final picker = ImagePicker();
+        final XFile? img = await picker.pickImage(source: ImageSource.gallery);
+        if (img != null) {
+          pickedImage = File(img.path);
+          (context as Element).markNeedsBuild();
+        }
+      } catch (_) {}
+    }
+
+    Future<void> runChat() async {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 12),
+                  Text('离线多模态聊天处理中...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      try {
+        final resp = await modelService.chat(
+          prompt: promptController.text.trim().isEmpty
+              ? '请分析图片内容并用中文解释。'
+              : promptController.text.trim(),
+          imageFile: pickedImage,
+        );
+        if (!context.mounted) return;
+        Navigator.of(context).pop();
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('聊天结果'),
+            content: SingleChildScrollView(child: Text(resp)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('关闭'),
+              ),
+            ],
+          ),
+        );
+      } catch (e) {
+        if (!context.mounted) return;
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('离线聊天失败：$e')),
+        );
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('多模态聊天测试', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        TextField(
+          controller: promptController,
+          minLines: 1,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: '输入提示词（可留空使用默认）',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            OutlinedButton.icon(
+              onPressed: pickImage,
+              icon: const Icon(Icons.image),
+              label: const Text('选择图片'),
+            ),
+            const SizedBox(width: 12),
+            if (pickedImage != null)
+              Expanded(
+                child: Text(
+                  pickedImage!.path.split('/').last,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.icon(
+            onPressed: runChat,
+            icon: const Icon(Icons.chat),
+            label: const Text('开始聊天'),
+          ),
+        ),
+      ],
     );
   }
 

@@ -265,6 +265,22 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// 对外暴露的多模态聊天接口（文本+可选图片），便于在离线模型页做测试
+  Future<String> chat({
+    required String prompt,
+    File? imageFile,
+  }) async {
+    // 如果模型未加载，先尝试加载
+    if (_state.status == ModelStatus.downloaded) {
+      await ensureModelLoaded();
+    }
+    if (_state.status != ModelStatus.ready) {
+      throw Exception('Model is not ready. Current status: ${_state.status}');
+    }
+
+    return _inferenceService.chat(prompt: prompt, imageFile: imageFile);
+  }
+
   Future<void> deleteModel() async {
     try {
       _logger.i('Deleting model...');
