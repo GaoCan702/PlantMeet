@@ -6,6 +6,14 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plantmeet/services/model_storage_manager.dart';
 
+/// 用于标识“非错误”的暂停情形（例如应用切到后台主动暂停）
+class DownloadPausedException implements Exception {
+  final String message;
+  DownloadPausedException([this.message = 'Download paused']);
+  @override
+  String toString() => message;
+}
+
 /// 简化的模型下载器 - 参考 flutter_gemma 的最佳实践
 class SimpleModelDownloader {
   static const String _modelUrl =
@@ -24,6 +32,18 @@ class SimpleModelDownloader {
 
   // 并发控制
   Completer<bool>? _downloadCompleter;
+
+  // 生命周期/暂停控制
+  http.Client? _client;
+  bool _pauseRequested = false;
+
+  /// 主动暂停下载（会安全关闭连接并抛出 DownloadPausedException）
+  void pause() {
+    _pauseRequested = true;
+    try {
+      _client?.close();
+    } catch (_) {}
+  }
 
   SimpleModelDownloader(this._storageManager);
 
@@ -156,7 +176,10 @@ class SimpleModelDownloader {
       }
 
       onStatusUpdate('连接服务器...');
-      response = await request.send();
+      _pauseRequested = false;
+      final client = http.Client();
+      _client = client;
+      response = await client.send(request);
 
       if (response.statusCode == 200 || response.statusCode == 206) {
         final contentLength = response.contentLength ?? 0;
@@ -190,6 +213,11 @@ class SimpleModelDownloader {
             );
             lastProgressUpdate = now;
           }
+
+          // 如果外部请求暂停，则安全中断
+          if (_pauseRequested) {
+            throw DownloadPausedException();
+          }
         }
 
         await fileSink.close();
@@ -217,12 +245,15 @@ class SimpleModelDownloader {
         throw Exception('下载失败: HTTP ${response.statusCode}');
       }
     } catch (e) {
+      if (e is DownloadPausedException || _pauseRequested) {
+        _logger.i('下载被暂停');
+        onStatusUpdate('下载已暂停，返回前台后将自动续传');
+        _downloadCompleter?.completeError(DownloadPausedException());
+        throw DownloadPausedException();
+      }
       _logger.e('下载模型时出错: $e');
       onStatusUpdate('下载失败: $e');
-
-      // 错误时完成 completer
       _downloadCompleter?.completeError(e);
-
       rethrow;
     } finally {
       if (fileSink != null) {
@@ -235,6 +266,11 @@ class SimpleModelDownloader {
 
       // 无论成功还是失败，都清理 completer
       _downloadCompleter = null;
+      try {
+        _client?.close();
+      } catch (_) {}
+      _client = null;
+      _pauseRequested = false;
     }
   }
 

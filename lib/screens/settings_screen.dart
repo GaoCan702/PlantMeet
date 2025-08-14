@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_settings.dart';
 import '../models/embedded_model.dart';
 import '../services/app_state.dart';
@@ -22,11 +23,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late AppSettings _settings;
   final _formKey = GlobalKey<FormState>();
 
+  // 下载策略（通过 SharedPreferences 持久化，便于服务在无上下文时读取）
+  bool _allowBackgroundDownload = false; // 是否允许后台继续下载
+  bool _wifiOnlyDownload = true; // 仅在 Wi‑Fi 下下载
+  bool _autoPauseLowBattery = true; // 低电量自动暂停
+
+  static const _prefsAllowBackgroundKey = 'allow_background_download';
+  static const _prefsWifiOnlyKey = 'wifi_only_download';
+  static const _prefsAutoPauseLowBatteryKey = 'auto_pause_low_battery';
+
   @override
   void initState() {
     super.initState();
     final appState = Provider.of<AppState>(context, listen: false);
     _settings = appState.settings ?? AppSettings();
+    _loadDownloadPolicy();
   }
 
   @override
@@ -48,6 +59,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  Future<void> _loadDownloadPolicy() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _allowBackgroundDownload =
+          prefs.getBool(_prefsAllowBackgroundKey) ?? false;
+      _wifiOnlyDownload = prefs.getBool(_prefsWifiOnlyKey) ?? true;
+      _autoPauseLowBattery =
+          prefs.getBool(_prefsAutoPauseLowBatteryKey) ?? true;
+    });
+  }
+
+  Future<void> _saveDownloadPolicy() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefsAllowBackgroundKey, _allowBackgroundDownload);
+    await prefs.setBool(_prefsWifiOnlyKey, _wifiOnlyDownload);
+    await prefs.setBool(
+      _prefsAutoPauseLowBatteryKey,
+      _autoPauseLowBattery,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,6 +97,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // 应用内AI模型管理
             _buildEmbeddedModelSection(),
+            const SizedBox(height: 16),
+            // 下载策略
+            _buildDownloadPolicySection(),
             const SizedBox(height: 16),
             // MNN Chat服务
             _buildMNNChatServiceSection(),
@@ -276,6 +311,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDownloadPolicySection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.download, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '下载策略',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              title: const Text('允许后台继续下载模型'),
+              subtitle: const Text('切换到其他应用时仍继续下载（可能增加电量与流量消耗）'),
+              value: _allowBackgroundDownload,
+              onChanged: (v) async {
+                setState(() => _allowBackgroundDownload = v);
+                await _saveDownloadPolicy();
+              },
+            ),
+            SwitchListTile(
+              title: const Text('仅在 Wi‑Fi 下下载模型'),
+              subtitle: const Text('移动网络时将等待 Wi‑Fi 再继续'),
+              value: _wifiOnlyDownload,
+              onChanged: (v) async {
+                setState(() => _wifiOnlyDownload = v);
+                await _saveDownloadPolicy();
+              },
+            ),
+            SwitchListTile(
+              title: const Text('低电量时自动暂停下载'),
+              subtitle: const Text('电量低于 15% 时自动暂停，充电或提升电量后可手动继续'),
+              value: _autoPauseLowBattery,
+              onChanged: (v) async {
+                setState(() => _autoPauseLowBattery = v);
+                await _saveDownloadPolicy();
+              },
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '说明：此策略即时生效；后台下载在部分系统上可能仍受系统限制。',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant,
+                  ),
             ),
           ],
         ),

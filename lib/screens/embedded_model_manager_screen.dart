@@ -140,18 +140,45 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
     BuildContext context,
     EmbeddedModelService modelService,
   ) {
-    return ModelDownloadProgressCard(
-      progress: modelService.downloadProgress,
-      currentSource: modelService.state.currentSource,
-      downloadedBytes:
-          (modelService.downloadProgress *
-                  (modelService.modelInfo?.sizeBytes ?? 0))
-              .round(),
-      totalBytes: modelService.modelInfo?.sizeBytes ?? 0,
-      statusMessage: modelService.downloadStatus.isNotEmpty
-          ? modelService.downloadStatus
-          : null,
-      onCancel: () => modelService.cancelDownload(),
+    return Column(
+      children: [
+        ModelDownloadProgressCard(
+          progress: modelService.downloadProgress,
+          currentSource: modelService.state.currentSource,
+          downloadedBytes:
+              (modelService.downloadProgress *
+                      (modelService.modelInfo?.sizeBytes ?? 0))
+                  .round(),
+          totalBytes: modelService.modelInfo?.sizeBytes ?? 0,
+          statusMessage: modelService.downloadStatus.isNotEmpty
+              ? modelService.downloadStatus
+              : null,
+          onCancel: () => modelService.cancelDownload(),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () {
+                  // 主动继续（忽略一次 Wi‑Fi 或低电量限制）
+                  modelService.didChangeAppLifecycleState(AppLifecycleState.resumed);
+                },
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('继续下载'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => modelService.cancelDownload(),
+                icon: const Icon(Icons.stop),
+                label: const Text('取消'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
