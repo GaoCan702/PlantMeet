@@ -113,8 +113,7 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
       children: [
         _buildFeatureChip('🚀 完全离线', Colors.green),
         _buildFeatureChip('🔒 隐私保护', Colors.blue),
-        _buildFeatureChip('📱 端侧推理', Colors.orange),
-        _buildFeatureChip('🌱 植物专用', Colors.teal),
+        _buildFeatureChip('📱 端侧推理', Colors.orange)
       ],
     );
   }
@@ -238,11 +237,19 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
             Expanded(
               child: FilledButton.icon(
                 onPressed: () {
-                  // 主动继续（忽略一次 Wi‑Fi 或低电量限制）
+                  // 继续下载（忽略一次 Wi‑Fi/电量限制）
                   modelService.didChangeAppLifecycleState(AppLifecycleState.resumed);
                 },
                 icon: const Icon(Icons.play_arrow),
-                label: const Text('继续下载'),
+                label: const Text('继续'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => modelService.pauseDownload(),
+                icon: const Icon(Icons.pause),
+                label: const Text('暂停'),
               ),
             ),
             const SizedBox(width: 12),

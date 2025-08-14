@@ -426,6 +426,20 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// 暂停下载（保持当前进度与状态为 downloading，仅停止网络流）
+  void pauseDownload() {
+    if (_state.status == ModelStatus.downloading) {
+      try {
+        _downloader.pause();
+        _downloadStatus = '下载已暂停';
+        notifyListeners();
+        _logger.i('Download paused by user');
+      } catch (e) {
+        _logger.w('Pause download failed: $e');
+      }
+    }
+  }
+
   Future<String> getCompatibilityReport() async {
     if (_state.modelInfo == null) {
       await _loadModelInfo();
