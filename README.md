@@ -137,6 +137,20 @@ flutter build apk --release --dart-define=HF_ACCESS_TOKEN=$HF_ACCESS_TOKEN
   - 建议：仅在开发/内测阶段使用该方式；如需线上下载受限资源，请改为通过服务端代理或用户自行提供密钥。
 - 未提供 `HF_ACCESS_TOKEN` 时，代码会以匿名方式访问（可能受限）。
 
+## ⚡ 性能优化
+
+### 冷启动优化
+应用已实施以下冷启动优化策略：
+
+- **延后模型初始化**：AI模型初始化延后到首帧渲染后执行，避免阻塞应用启动
+- **本地模型校验**：启动时仅做本地模型文件校验，不进行内存加载
+- **按需加载**：AI模型仅在实际使用时才加载到内存，减少启动时间
+- **后台初始化**：模型服务在后台异步初始化，不影响UI响应
+
+### Android优化
+- 启用 `OnBackInvokedCallback` 支持现代Android返回手势
+- 硬件加速和窗口优化配置
+
 ## 🏗️ Architecture
 
 ### Project Structure

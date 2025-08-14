@@ -43,16 +43,15 @@ class EmbeddedModelService extends ChangeNotifier {
       final capability = await _capabilityDetector.detect();
       _updateState(_state.copyWith(capability: capability));
 
-      // Check model status using simplified downloader
+      // 启动阶段仅做本地模型校验，不进行模型加载
       final isDownloaded = await _downloader.isModelDownloaded(_modelId);
       
       if (isDownloaded) {
         _updateState(_state.copyWith(status: ModelStatus.downloaded));
-        
-        // Try to load the model
-        await _tryLoadModel();
+        _logger.i('Local model validation passed, ready for loading when needed');
       } else {
         _updateState(_state.copyWith(status: ModelStatus.notDownloaded));
+        _logger.i('No local model found, download required');
       }
 
       // Load model info
@@ -191,7 +190,24 @@ class EmbeddedModelService extends ChangeNotifier {
     }
   }
 
+  /// 按需加载模型（如果尚未加载）
+  Future<void> ensureModelLoaded() async {
+    if (_state.status == ModelStatus.downloaded) {
+      _logger.i('Loading model on demand...');
+      await _tryLoadModel();
+    } else if (_state.status == ModelStatus.ready) {
+      _logger.d('Model already loaded and ready');
+    } else {
+      throw Exception('Model is not available for loading. Current status: ${_state.status}');
+    }
+  }
+
   Future<List<RecognitionResult>> recognizePlant(File imageFile) async {
+    // 如果模型未加载，先尝试加载
+    if (_state.status == ModelStatus.downloaded) {
+      await ensureModelLoaded();
+    }
+    
     if (_state.status != ModelStatus.ready) {
       throw Exception('Model is not ready. Current status: ${_state.status}');
     }

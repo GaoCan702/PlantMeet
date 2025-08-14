@@ -42,10 +42,8 @@ void main() async {
   // 初始化应用状态
   final appState = AppState(databaseService: databaseService);
   
-  // 并行初始化服务
-  await Future.wait([
-    appState.initialize(),
-  ]);
+  // 仅初始化应用状态，延后模型初始化
+  await appState.initialize();
   
   // 检查是否显示新手引导
   final hasSeenOnboarding = await OnboardingService.hasSeenOnboarding();
