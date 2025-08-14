@@ -9,7 +9,7 @@ enum ModelStatus {
 }
 
 enum ModelSource {
-  github,      // 新增：GitHub 开源模型
+  github, // 新增：GitHub 开源模型
   modelScope,
   huggingFace,
   kaggle,
@@ -17,11 +17,7 @@ enum ModelSource {
   direct,
 }
 
-enum InferenceBackend {
-  cpu,
-  gpu,
-  auto,
-}
+enum InferenceBackend { cpu, gpu, auto }
 
 class ModelInfo {
   final String id;

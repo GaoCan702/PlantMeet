@@ -5,7 +5,7 @@ import '../models/embedded_model.dart';
 class ModelScopeClient {
   static const String baseUrl = 'https://modelscope.cn/api/v1';
   static const String modelId = 'google/gemma-3n-E4B-it-litert-preview';
-  
+
   final Dio _dio;
   final Logger _logger = Logger();
 
@@ -18,7 +18,7 @@ class ModelScopeClient {
   Future<ModelInfo> getModelInfo() async {
     try {
       final response = await _dio.get('$baseUrl/models/$modelId');
-      
+
       if (response.statusCode == 200) {
         final data = response.data;
         return _parseModelInfo(data);
@@ -34,11 +34,11 @@ class ModelScopeClient {
   Future<List<ModelFile>> getModelFiles() async {
     try {
       final response = await _dio.get('$baseUrl/models/$modelId/repo/files');
-      
+
       if (response.statusCode == 200) {
         final data = response.data;
         final files = data['files'] as List;
-        
+
         return files
             .map((file) => ModelFile.fromJson(file))
             .where((file) => _isRequiredFile(file.name))
@@ -57,12 +57,14 @@ class ModelScopeClient {
       final response = await _dio.get(
         '$baseUrl/models/$modelId/repo/files/$filename/download',
       );
-      
+
       if (response.statusCode == 200) {
         final data = response.data;
         return data['download_url'] as String;
       } else {
-        throw Exception('Failed to get download URL for $filename: ${response.statusCode}');
+        throw Exception(
+          'Failed to get download URL for $filename: ${response.statusCode}',
+        );
       }
     } catch (e) {
       _logger.e('Error getting download URL for $filename: $e');
@@ -84,7 +86,7 @@ class ModelScopeClient {
   Future<Duration> testDownloadSpeed() async {
     const testFile = 'config.json'; // Small file for speed testing
     final stopwatch = Stopwatch()..start();
-    
+
     try {
       final downloadUrl = await getDownloadUrl(testFile);
       await _dio.head(downloadUrl);
@@ -131,9 +133,9 @@ class ModelScopeClient {
 
   bool _isRequiredFile(String filename) {
     final requiredFiles = _getRequiredFiles();
-    return requiredFiles.contains(filename) || 
-           filename.endsWith('.tflite') ||
-           filename.endsWith('.json');
+    return requiredFiles.contains(filename) ||
+        filename.endsWith('.tflite') ||
+        filename.endsWith('.json');
   }
 
   ModelInfo _getFallbackModelInfo() {
@@ -143,17 +145,15 @@ class ModelScopeClient {
       version: 'main',
       sizeBytes: 2500 * 1024 * 1024, // ~2.5GB
       requiredFiles: _getRequiredFiles(),
-      description: 'Gemma 3 Nano 4B multimodal model for text and image understanding',
-      metadata: {
-        'source': 'ModelScope',
-        'fallback': true,
-      },
+      description:
+          'Gemma 3 Nano 4B multimodal model for text and image understanding',
+      metadata: {'source': 'ModelScope', 'fallback': true},
     );
   }
 
   List<ModelFile> _getFallbackModelFiles() {
     final baseUrl = 'https://modelscope.cn/models/$modelId/resolve/main';
-    
+
     return [
       ModelFile(
         name: 'model.tflite',

@@ -1,4 +1,3 @@
-
 class PlantSpecies {
   final String id;
   final String scientificName;

@@ -17,9 +17,7 @@ class PlantGridItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -35,11 +33,7 @@ class PlantGridItem extends StatelessWidget {
                     top: Radius.circular(12),
                   ),
                 ),
-                child: const Icon(
-                  Icons.eco,
-                  size: 48,
-                  color: Colors.green,
-                ),
+                child: const Icon(Icons.eco, size: 48, color: Colors.green),
               ),
             ),
             Padding(
@@ -68,11 +62,7 @@ class PlantGridItem extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(
-                        Icons.visibility,
-                        size: 16,
-                        color: Colors.grey[600],
-                      ),
+                      Icon(Icons.visibility, size: 16, color: Colors.grey[600]),
                       const SizedBox(width: 4),
                       Text(
                         '$encounterCount 次遇见',

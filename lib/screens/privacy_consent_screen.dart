@@ -7,11 +7,9 @@ import 'policy_detail_screen.dart';
 /// 隐私协议同意页面 - 首次启动时显示
 class PrivacyConsentScreen extends StatefulWidget {
   final VoidCallback onConsented;
-  
-  const PrivacyConsentScreen({
-    Key? key,
-    required this.onConsented,
-  }) : super(key: key);
+
+  const PrivacyConsentScreen({Key? key, required this.onConsented})
+    : super(key: key);
 
   @override
   State<PrivacyConsentScreen> createState() => _PrivacyConsentScreenState();
@@ -24,7 +22,7 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
   bool _isAccepting = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  
+
   @override
   void initState() {
     super.initState();
@@ -32,32 +30,29 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
     _animationController.forward();
   }
-  
+
   @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
   }
-  
-  bool get _canProceed => _hasAcceptedUserAgreement && _hasAcceptedPrivacyPolicy;
-  
+
+  bool get _canProceed =>
+      _hasAcceptedUserAgreement && _hasAcceptedPrivacyPolicy;
+
   Future<void> _handleAccept() async {
     if (!_canProceed) return;
-    
+
     setState(() {
       _isAccepting = true;
     });
-    
+
     try {
       await PrivacyService.setUserConsent(
         PolicyConsent(
@@ -68,21 +63,18 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
           consentDate: DateTime.now(),
         ),
       );
-      
+
       widget.onConsented();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('保存协议同意状态失败: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('保存协议同意状态失败: $e'), backgroundColor: Colors.red),
       );
       setState(() {
         _isAccepting = false;
       });
     }
   }
-  
+
   /// 处理用户拒绝协议
   void _handleReject() {
     showDialog(
@@ -125,7 +117,7 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
       },
     );
   }
-  
+
   /// 退出应用
   void _exitApp() {
     // 根据平台选择不同的退出方式
@@ -147,14 +139,12 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
       },
     );
   }
-  
+
   void _showPolicyDetail(String title, String content) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => PolicyDetailScreen(
-          title: title,
-          content: content,
-        ),
+        builder: (context) =>
+            PolicyDetailScreen(title: title, content: content),
       ),
     );
   }
@@ -167,12 +157,17 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 24.0 + MediaQuery.of(context).padding.bottom),
+            padding: EdgeInsets.fromLTRB(
+              24.0,
+              24.0,
+              24.0,
+              24.0 + MediaQuery.of(context).padding.bottom,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Spacer(flex: 2),
-                
+
                 // Logo和应用名称
                 Container(
                   width: 120,
@@ -182,7 +177,9 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.3),
                         blurRadius: 16,
                         offset: const Offset(0, 8),
                       ),
@@ -194,9 +191,9 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
                     color: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 Text(
                   'PlantMeet',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -204,26 +201,32 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 Text(
                   '遇见植物，记录美好',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
-                
+
                 const Spacer(flex: 1),
-                
+
                 // 隐私说明
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Column(
@@ -239,9 +242,8 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
                           Expanded(
                             child: Text(
                               '隐私保护承诺',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -255,9 +257,9 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // 协议同意选项
                 _buildConsentCheckbox(
                   value: _hasAcceptedUserAgreement,
@@ -273,9 +275,9 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
                     PrivacyPolicy.userAgreementContent,
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 _buildConsentCheckbox(
                   value: _hasAcceptedPrivacyPolicy,
                   onChanged: (value) {
@@ -290,9 +292,9 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
                     PrivacyPolicy.privacyPolicyContent,
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // 同意/拒绝按钮组
                 Row(
                   children: [
@@ -321,22 +323,26 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(width: 16),
-                    
+
                     // 同意按钮
                     Expanded(
                       child: SizedBox(
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: _canProceed && !_isAccepting ? _handleAccept : null,
+                          onPressed: _canProceed && !_isAccepting
+                              ? _handleAccept
+                              : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _canProceed 
+                            backgroundColor: _canProceed
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
-                            foregroundColor: _canProceed 
+                                : Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.12),
+                            foregroundColor: _canProceed
                                 ? Theme.of(context).colorScheme.onPrimary
-                                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
+                                : Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.38),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -351,9 +357,12 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          Theme.of(context).colorScheme.onPrimary,
-                                        ),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.onPrimary,
+                                            ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -372,14 +381,16 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
                     ),
                   ],
                 ),
-                
+
                 const Spacer(flex: 1),
-                
+
                 // 版本信息
                 Text(
                   '协议版本 ${PrivacyPolicy.currentVersion} • 更新于 ${PrivacyPolicy.lastUpdated}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -390,7 +401,7 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
       ),
     );
   }
-  
+
   /// 构建协议同意复选框
   Widget _buildConsentCheckbox({
     required bool value,
@@ -436,7 +447,7 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
       ],
     );
   }
-  
+
   /// 显示退出应用确认对话框
   void _showExitDialog() {
     showDialog(

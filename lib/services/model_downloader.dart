@@ -14,28 +14,32 @@ import 'model_storage_manager.dart';
 class ModelDownloader {
   // 不再使用模拟下载，直接使用真实的 HuggingFace 客户端
   bool get _useMockDownload => false;
-  
+
   // Google AI Edge Gallery 官方下载源
-  static const String _aiEdgeReleaseUrl = 'https://github.com/google-ai-edge/gallery/releases/latest/download/gemma-3n-4b-it-litert.task';
-  
+  static const String _aiEdgeReleaseUrl =
+      'https://github.com/google-ai-edge/gallery/releases/latest/download/gemma-3n-4b-it-litert.task';
+
   // TensorFlow Hub 植物识别模型（公开可下载）
-  static const String _tfhubPlantModel = 'https://tfhub.dev/google/aiy/vision/classifier/plants_V1/1';
-  static const String _plantnetModel = 'https://storage.googleapis.com/tfhub-modules/google/aiy/vision/classifier/plants_V1/1.tar.gz';
-  
+  static const String _tfhubPlantModel =
+      'https://tfhub.dev/google/aiy/vision/classifier/plants_V1/1';
+  static const String _plantnetModel =
+      'https://storage.googleapis.com/tfhub-modules/google/aiy/vision/classifier/plants_V1/1.tar.gz';
+
   // 使用公开可下载的植物识别 TFLite 模型
   static final Map<ModelSource, ModelSourceInfo> _sources = {
     ModelSource.github: ModelSourceInfo(
       baseUrl: 'https://raw.githubusercontent.com',
-      modelId: 'plant-disease-detection-v1', 
+      modelId: 'plant-disease-detection-v1',
       priority: 1, // 最高优先级 - 专门的植物识别模型
       regionOptimized: ['Global'], // 全球可用
-      testUrl: 'https://raw.githubusercontent.com/akshayrana30/plant-disease-detection/master/PlantSaverApp/app/src/main/assets/model.tflite',
+      testUrl:
+          'https://raw.githubusercontent.com/akshayrana30/plant-disease-detection/master/PlantSaverApp/app/src/main/assets/model.tflite',
     ),
     ModelSource.huggingFace: ModelSourceInfo(
       baseUrl: 'https://huggingface.co',
       modelId: 'google/gemma-3n-E4B-it-litert-preview', // 保留作为备用
       priority: 2, // 降低优先级
-      regionOptimized: ['US', 'EU', 'CN'], 
+      regionOptimized: ['US', 'EU', 'CN'],
       testUrl: 'https://huggingface.co/google/gemma-3n-E4B-it-litert-preview',
     ),
     ModelSource.modelScope: ModelSourceInfo(
@@ -43,7 +47,8 @@ class ModelDownloader {
       modelId: 'google/gemma-3n-E4B-it-litert-preview',
       priority: 2, // 备用选项
       regionOptimized: ['CN', 'AS'],
-      testUrl: 'https://modelscope.cn/api/v1/models/google/gemma-3n-E4B-it-litert-preview',
+      testUrl:
+          'https://modelscope.cn/api/v1/models/google/gemma-3n-E4B-it-litert-preview',
     ),
     ModelSource.kaggle: ModelSourceInfo(
       baseUrl: 'https://www.kaggle.com',
@@ -63,8 +68,11 @@ class ModelDownloader {
   CancelToken? _currentDownloadToken;
   StreamController<DownloadProgress>? _progressController;
 
-  ModelDownloader(this._storageManager, this._modelScopeClient, this._huggingFaceClient) 
-      : _dio = Dio() {
+  ModelDownloader(
+    this._storageManager,
+    this._modelScopeClient,
+    this._huggingFaceClient,
+  ) : _dio = Dio() {
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(minutes: 10);
   }
@@ -92,13 +100,13 @@ class ModelDownloader {
     for (final source in sources) {
       try {
         _logger.i('Attempting download from ${source.name}');
-        
+
         yield* _downloadFromSource(modelId, source);
         return; // Success, exit
       } catch (e) {
         lastError = e as Exception;
         _logger.w('Download failed from ${source.name}: $e');
-        
+
         // If not the last source, continue to next
         if (source != sources.last) {
           await Future.delayed(const Duration(seconds: 2));
@@ -189,15 +197,15 @@ class ModelDownloader {
 
   Future<void> _downloadFile(
     String url,
-    String filePath,
-    {required Function(int, int) onProgress}
-  ) async {
+    String filePath, {
+    required Function(int, int) onProgress,
+  }) async {
     if (_useMockDownload) {
       // 模拟下载过程
       await _simulateDownload(filePath, onProgress);
       return;
     }
-    
+
     // 真实下载
     try {
       await _dio.download(
@@ -232,14 +240,14 @@ class ModelDownloader {
     // 模拟文件下载过程
     final fileName = path.basename(filePath);
     final fileSize = _getExpectedFileSize(fileName);
-    
+
     // 创建临时内容
     final content = _createMockFileContent(fileName);
-    
+
     // 模拟渐进式下载
     const chunkSize = 1024 * 1024; // 1MB chunks
     int downloaded = 0;
-    
+
     while (downloaded < fileSize) {
       if (_currentDownloadToken?.isCancelled == true) {
         throw DioException.requestCancelled(
@@ -247,24 +255,26 @@ class ModelDownloader {
           reason: 'Download cancelled by user',
         );
       }
-      
+
       final remaining = fileSize - downloaded;
       final currentChunk = remaining < chunkSize ? remaining : chunkSize;
       downloaded += currentChunk;
-      
+
       // 报告进度
       onProgress(downloaded, fileSize);
-      
+
       // 模拟下载延时
       await Future.delayed(const Duration(milliseconds: 100));
     }
-    
+
     // 写入模拟文件内容
     final file = File(filePath);
     await file.parent.create(recursive: true);
     await file.writeAsBytes(content);
-    
-    _logger.i('模拟文件下载完成: $fileName (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)');
+
+    _logger.i(
+      '模拟文件下载完成: $fileName (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)',
+    );
   }
 
   int _getExpectedFileSize(String fileName) {
@@ -385,12 +395,12 @@ class ModelDownloader {
     DateTime startTime,
   ) {
     final elapsed = DateTime.now().difference(startTime);
-    final speed = elapsed.inMilliseconds > 0 
-        ? downloadedBytes / elapsed.inMilliseconds * 1000 
+    final speed = elapsed.inMilliseconds > 0
+        ? downloadedBytes / elapsed.inMilliseconds * 1000
         : 0.0;
-    
+
     final remainingBytes = totalBytes - downloadedBytes;
-    final estimatedTime = speed > 0 
+    final estimatedTime = speed > 0
         ? Duration(seconds: (remainingBytes / speed).round())
         : const Duration(seconds: 0);
 
@@ -408,8 +418,8 @@ class ModelDownloader {
     // 这是最稳定可靠的下载源
     return [
       ModelSource.huggingFace, // flutter_gemma 官方推荐
-      ModelSource.modelScope,  // 国内备用
-      ModelSource.kaggle,      // Kaggle 备用
+      ModelSource.modelScope, // 国内备用
+      ModelSource.kaggle, // Kaggle 备用
     ];
   }
 
@@ -487,15 +497,22 @@ class ModelDownloader {
       id: 'plant-disease-detection-v1',
       name: 'Plant Disease Detection TFLite',
       version: '1.0',
-      description: 'Open source plant disease detection model optimized for mobile devices. '
+      description:
+          'Open source plant disease detection model optimized for mobile devices. '
           'Trained to identify common plant diseases and health conditions.',
       sizeBytes: 15 * 1024 * 1024, // 约 15MB (比 Gemma 3n 小得多)
       requiredFiles: ['model.tflite'],
       metadata: {
         'author': 'Open Source Community',
         'license': 'MIT/Apache 2.0',
-        'tags': ['plant-disease', 'mobile', 'tensorflow-lite', 'plant-recognition'],
-        'sourceRepository': 'https://github.com/akshayrana30/plant-disease-detection',
+        'tags': [
+          'plant-disease',
+          'mobile',
+          'tensorflow-lite',
+          'plant-recognition',
+        ],
+        'sourceRepository':
+            'https://github.com/akshayrana30/plant-disease-detection',
         'modelType': 'cnn-classification',
         'capabilities': [
           'plant-disease-detection',
@@ -512,8 +529,9 @@ class ModelDownloader {
 
   /// 获取 GitHub 开源植物识别模型文件列表
   List<ModelFile> _getGitHubModelFiles() {
-    const baseUrl = 'https://raw.githubusercontent.com/akshayrana30/plant-disease-detection/master/PlantSaverApp/app/src/main/assets';
-    
+    const baseUrl =
+        'https://raw.githubusercontent.com/akshayrana30/plant-disease-detection/master/PlantSaverApp/app/src/main/assets';
+
     return [
       ModelFile(
         name: 'model.tflite',

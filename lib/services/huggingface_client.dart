@@ -9,11 +9,14 @@ class HuggingFaceClient {
   // 使用 Gemma 3n E4B LiteRT 模型，专为移动设备优化
   static const String _modelId = 'google/gemma-3n-E4B-it-litert-preview';
   // 通过 --dart-define=HF_ACCESS_TOKEN=... 注入；为空时匿名请求
-  static const String _envAccessToken = String.fromEnvironment('HF_ACCESS_TOKEN', defaultValue: '');
-  
+  static const String _envAccessToken = String.fromEnvironment(
+    'HF_ACCESS_TOKEN',
+    defaultValue: '',
+  );
+
   final Dio _dio;
   final Logger _logger = Logger();
-  
+
   HuggingFaceClient() : _dio = Dio() {
     _dio.options.baseUrl = _apiBaseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
@@ -26,7 +29,7 @@ class HuggingFaceClient {
       headers['Authorization'] = 'Bearer $_envAccessToken';
     }
     _dio.options.headers = headers;
-    
+
     _logger.i('HuggingFace client initialized with embedded access token');
   }
 
@@ -36,28 +39,33 @@ class HuggingFaceClient {
   Future<ModelInfo> getModelInfo() async {
     try {
       _logger.i('获取 Gemma 3 Nano 模型信息...');
-      
+
       // HuggingFace API 获取模型信息
       final response = await _dio.get('/models/$_modelId');
       final data = response.data;
-      
+
       return ModelInfo(
         id: _modelId,
         name: 'Gemma 3n E4B LiteRT Preview',
         version: data['sha'] ?? 'latest',
-        description: 'Google Gemma 3 Nano multimodal model optimized for mobile devices with vision support (LiteRT)',
+        description:
+            'Google Gemma 3 Nano multimodal model optimized for mobile devices with vision support (LiteRT)',
         sizeBytes: 4405655031, // 4.10GB 准确大小
         requiredFiles: ['gemma-3n-E4B-it-int4.task'], // LiteRT 任务文件
         metadata: {
           'author': 'Google',
           'license': data['cardData']?['license'] ?? 'Gemma License',
-          'tags': (data['tags'] as List?)?.cast<String>() ?? ['multimodal', 'vision', 'text-generation'],
+          'tags':
+              (data['tags'] as List?)?.cast<String>() ??
+              ['multimodal', 'vision', 'text-generation'],
           'downloadCount': data['downloads'] ?? 0,
-          'lastModified': DateTime.tryParse(data['lastModified'] ?? '') ?? DateTime.now().toIso8601String(),
+          'lastModified':
+              DateTime.tryParse(data['lastModified'] ?? '') ??
+              DateTime.now().toIso8601String(),
           'modelType': 'gemma-3n-e4b',
           'capabilities': [
             'text-generation',
-            'vision-understanding', 
+            'vision-understanding',
             'multimodal-chat',
             'plant-identification',
           ],
@@ -80,42 +88,51 @@ class HuggingFaceClient {
   Future<List<ModelFile>> getModelFiles() async {
     try {
       _logger.i('获取 Gemma 3n E4B LiteRT 模型文件列表...');
-      
+
       // Gemma 3n E4B LiteRT Preview 使用单个 .task 文件
       final requiredFiles = [
         'gemma-3n-E4B-it-int4.task', // 4.41GB LiteRT 任务文件
       ];
-      
+
       final modelFiles = <ModelFile>[];
-      
+
       // 直接获取每个必需文件的信息
       for (final fileName in requiredFiles) {
         try {
           final modelFile = await _getFileInfo(fileName);
           modelFiles.add(modelFile);
-          _logger.i('✅ 找到文件: $fileName (${(modelFile.size / 1024 / 1024).toStringAsFixed(1)} MB)');
+          _logger.i(
+            '✅ 找到文件: $fileName (${(modelFile.size / 1024 / 1024).toStringAsFixed(1)} MB)',
+          );
         } catch (e) {
           _logger.w('⚠️ 获取文件信息失败 $fileName: $e，使用估算大小');
-          
+
           // 为必需文件创建默认条目
           final downloadUrl = '$_baseUrl/$_modelId/resolve/main/$fileName';
           final estimatedSize = _estimateFileSize(fileName);
-          
-          modelFiles.add(ModelFile(
-            name: fileName,
-            size: estimatedSize,
-            downloadUrl: downloadUrl,
-            checksum: null,
-          ));
+
+          modelFiles.add(
+            ModelFile(
+              name: fileName,
+              size: estimatedSize,
+              downloadUrl: downloadUrl,
+              checksum: null,
+            ),
+          );
         }
       }
-      
+
       if (modelFiles.isEmpty) {
         throw Exception('未找到有效的模型文件');
       }
-      
-      final totalSizeGB = modelFiles.fold<double>(0, (sum, file) => sum + (file.size / 1024 / 1024 / 1024));
-      _logger.i('📦 LiteRT 模型文件列表准备完成，共 ${modelFiles.length} 个文件，总大小: ${totalSizeGB.toStringAsFixed(2)} GB');
+
+      final totalSizeGB = modelFiles.fold<double>(
+        0,
+        (sum, file) => sum + (file.size / 1024 / 1024 / 1024),
+      );
+      _logger.i(
+        '📦 LiteRT 模型文件列表准备完成，共 ${modelFiles.length} 个文件，总大小: ${totalSizeGB.toStringAsFixed(2)} GB',
+      );
       return modelFiles;
     } catch (e) {
       _logger.e('获取模型文件列表失败: $e');
@@ -127,13 +144,13 @@ class HuggingFaceClient {
   /// 获取单个文件信息
   Future<ModelFile> _getFileInfo(String fileName) async {
     final downloadUrl = '$_baseUrl/$_modelId/resolve/main/$fileName';
-    
+
     try {
       // 获取文件大小
       final headResponse = await _dio.head(downloadUrl);
       final contentLength = headResponse.headers['content-length']?.first;
       final fileSize = contentLength != null ? int.parse(contentLength) : 0;
-      
+
       return ModelFile(
         name: fileName,
         size: fileSize,
@@ -156,13 +173,15 @@ class HuggingFaceClient {
   bool _isRequiredModelFile(String fileName) {
     final requiredExtensions = ['.tflite', '.bin', '.json', '.txt'];
     final ignoredFiles = ['README.md', 'config.json', '.gitattributes'];
-    
+
     if (ignoredFiles.contains(fileName)) return false;
-    
-    return requiredExtensions.any((ext) => fileName.toLowerCase().endsWith(ext)) ||
-           fileName.contains('model') ||
-           fileName.contains('weights') ||
-           fileName.contains('tokenizer');
+
+    return requiredExtensions.any(
+          (ext) => fileName.toLowerCase().endsWith(ext),
+        ) ||
+        fileName.contains('model') ||
+        fileName.contains('weights') ||
+        fileName.contains('tokenizer');
   }
 
   /// 获取文件类型
@@ -213,21 +232,26 @@ class HuggingFaceClient {
       id: _modelId,
       name: 'Gemma 3n E4B LiteRT Preview',
       version: 'latest',
-      description: 'Google Gemma 3 Nano multimodal model optimized for mobile devices with vision support (LiteRT)',
+      description:
+          'Google Gemma 3 Nano multimodal model optimized for mobile devices with vision support (LiteRT)',
       sizeBytes: _estimateModelSize(),
-      requiredFiles: [
-        'gemma-3n-E4B-it-int4.task',
-      ],
+      requiredFiles: ['gemma-3n-E4B-it-int4.task'],
       metadata: {
         'author': 'Google',
         'license': 'Gemma License',
-        'tags': ['multimodal', 'vision', 'text-generation', 'litert', 'mobile-optimized'],
+        'tags': [
+          'multimodal',
+          'vision',
+          'text-generation',
+          'litert',
+          'mobile-optimized',
+        ],
         'downloadCount': 0,
         'lastModified': DateTime.now().toIso8601String(),
         'modelType': 'gemma-3n-e4b-litert',
         'capabilities': [
           'text-generation',
-          'vision-understanding', 
+          'vision-understanding',
           'multimodal-chat',
           'plant-identification',
           'litert-optimized',
@@ -248,7 +272,8 @@ class HuggingFaceClient {
       ModelFile(
         name: 'gemma-3n-E4B-it-int4.task',
         size: 4405655031, // 4.10GB 准确大小
-        downloadUrl: '$_baseUrl/$_modelId/resolve/main/gemma-3n-E4B-it-int4.task',
+        downloadUrl:
+            '$_baseUrl/$_modelId/resolve/main/gemma-3n-E4B-it-int4.task',
         checksum: null,
       ),
     ];
@@ -260,10 +285,10 @@ class HuggingFaceClient {
       _logger.w('HuggingFace 连接测试失败: 无有效 token');
       return false;
     }
-    
+
     try {
       _logger.i('开始测试 HuggingFace 连接，模型: $_modelId');
-      
+
       final response = await _dio.get(
         '/models/$_modelId',
         options: Options(
@@ -273,7 +298,7 @@ class HuggingFaceClient {
               : {},
         ),
       );
-      
+
       if (response.statusCode == 200) {
         _logger.i('✅ HuggingFace 连接测试成功');
         return true;
@@ -292,7 +317,7 @@ class HuggingFaceClient {
     try {
       final response = await _dio.get('/models/$_modelId');
       final data = response.data;
-      
+
       return {
         'downloads': data['downloads'] ?? 0,
         'likes': data['likes'] ?? 0,

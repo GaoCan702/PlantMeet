@@ -37,16 +37,12 @@ class MockRecognitionService {
           water: '需要充足水分',
           light: '全日照',
           temperature: '15-25°C',
-          tips: [
-            '种植时选择向阳的位置',
-            '生长期需要大量水分',
-            '可以采集瓜子食用',
-            '花期可达2-3个月'
-          ],
+          tips: ['种植时选择向阳的位置', '生长期需要大量水分', '可以采集瓜子食用', '花期可达2-3个月'],
         ),
         season: '夏季(6-9月)',
         locations: ['花园', '田野', '公园', '阳台'],
-        funFact: '向日葵的花盘其实由1000-2000朵小花组成，我们平时看到的"花瓣"实际上是外围的舌状花！而且年轻的向日葵确实会跟随太阳转动，这个现象叫做"向日性"。',
+        funFact:
+            '向日葵的花盘其实由1000-2000朵小花组成，我们平时看到的"花瓣"实际上是外围的舌状花！而且年轻的向日葵确实会跟随太阳转动，这个现象叫做"向日性"。',
         tags: ['观赏植物', '经济作物', '夏季花卉', '易种植'],
         scientificName: 'Helianthus annuus',
         family: '菊科向日葵属',
@@ -78,12 +74,7 @@ class MockRecognitionService {
           water: '适量浇水',
           light: '半日照',
           temperature: '10-25°C',
-          tips: [
-            '定期修剪枯枝促进开花',
-            '春季施肥效果最佳',
-            '注意预防蚜虫和黑斑病',
-            '冬季需要防寒保护'
-          ],
+          tips: ['定期修剪枯枝促进开花', '春季施肥效果最佳', '注意预防蚜虫和黑斑病', '冬季需要防寒保护'],
         ),
         season: '全年(春夏最盛)',
         locations: ['花园', '公园', '阳台', '庭院'],
@@ -136,12 +127,7 @@ class MockRecognitionService {
           water: '很少浇水',
           light: '全日照',
           temperature: '5-35°C',
-          tips: [
-            '每月浇水1-2次即可',
-            '冬季几乎不用浇水',
-            '喜欢透气性好的沙质土壤',
-            '可以放在阳光最充足的地方'
-          ],
+          tips: ['每月浇水1-2次即可', '冬季几乎不用浇水', '喜欢透气性好的沙质土壤', '可以放在阳光最充足的地方'],
         ),
         season: '全年(春夏生长旺盛)',
         locations: ['阳台', '办公室', '室内', '花园'],
@@ -177,16 +163,12 @@ class MockRecognitionService {
           water: '喜欢湿润',
           light: '半阴至全日照',
           temperature: '5-35°C',
-          tips: [
-            '生长速度快，需要定期修剪',
-            '喜欢湿润但不能积水',
-            '春季是最佳种植时间',
-            '可以用竹叶泡茶清热解毒'
-          ],
+          tips: ['生长速度快，需要定期修剪', '喜欢湿润但不能积水', '春季是最佳种植时间', '可以用竹叶泡茶清热解毒'],
         ),
         season: '全年(春夏生长最快)',
         locations: ['庭院', '公园', '山地', '河边'],
-        funFact: '有些竹子的生长速度能达到每天35厘米，是世界上生长最快的植物！而且竹子开花后会死亡，但有些竹种要几十年甚至上百年才开一次花。',
+        funFact:
+            '有些竹子的生长速度能达到每天35厘米，是世界上生长最快的植物！而且竹子开花后会死亡，但有些竹种要几十年甚至上百年才开一次花。',
         tags: ['观赏植物', '经济植物', '传统文化', '环保材料'],
         scientificName: 'Bambuseae',
         family: '禾本科竹亚科',
@@ -218,12 +200,7 @@ class MockRecognitionService {
           water: '见干见湿',
           light: '散射光',
           temperature: '15-25°C',
-          tips: [
-            '可以水培也可以土培',
-            '定期向叶片喷水增加湿度',
-            '剪下来的枝条可以扦插繁殖',
-            '放在明亮但避免直射的位置'
-          ],
+          tips: ['可以水培也可以土培', '定期向叶片喷水增加湿度', '剪下来的枝条可以扦插繁殖', '放在明亮但避免直射的位置'],
         ),
         season: '全年',
         locations: ['室内', '办公室', '卫生间', '客厅'],
@@ -276,7 +253,7 @@ class MockRecognitionService {
   /// 根据置信度和安全等级生成合适的用户提示
   static String generateUserGuidance(RecognitionResult result) {
     final guidance = StringBuffer();
-    
+
     // 置信度指导
     if (result.confidence < 0.6) {
       guidance.write('识别结果仅供参考，建议从不同角度再次拍摄。');
@@ -285,7 +262,7 @@ class MockRecognitionService {
     } else {
       guidance.write('识别结果比较可靠，可以作为参考。');
     }
-    
+
     // 安全性指导
     switch (result.safety.level) {
       case SafetyLevel.toxic:
@@ -302,7 +279,7 @@ class MockRecognitionService {
         guidance.write('\n❓ 安全信息未确认，建议谨慎处理。');
         break;
     }
-    
+
     return guidance.toString();
   }
 }

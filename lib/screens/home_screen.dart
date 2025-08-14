@@ -50,7 +50,7 @@ class HomeScreen extends StatelessWidget {
           }
 
           final speciesWithEncounters = appState.getSpeciesWithEncounters();
-          
+
           if (speciesWithEncounters.isEmpty) {
             return Column(
               children: [
@@ -61,25 +61,21 @@ class HomeScreen extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.eco,
-                            size: 80,
-                            color: Colors.grey[400],
-                          ),
+                          Icon(Icons.eco, size: 80, color: Colors.grey[400]),
                           const SizedBox(height: 24),
                           Text(
                             '还没有植物记录',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[700],
-                            ),
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[700],
+                                ),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             '点击右下角按钮开始识别植物',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: Colors.grey[600]),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -122,7 +118,9 @@ class HomeScreen extends StatelessWidget {
                   itemCount: speciesWithEncounters.length,
                   itemBuilder: (context, index) {
                     final species = speciesWithEncounters[index];
-                    final encounters = appState.getEncountersForSpecies(species.id);
+                    final encounters = appState.getEncountersForSpecies(
+                      species.id,
+                    );
                     return PlantGridItem(
                       species: species,
                       encounterCount: encounters.length,

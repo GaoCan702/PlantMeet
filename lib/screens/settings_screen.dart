@@ -2,12 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/app_settings.dart';
 import '../models/embedded_model.dart';
-import '../models/recognition_result.dart';
 import '../services/app_state.dart';
-import '../services/recognition_service.dart';
 import '../services/embedded_model_service.dart';
-import '../services/huggingface_client.dart';
-import '../widgets/copyable_error_message.dart';
 import '../models/privacy_policy.dart';
 import '../services/privacy_service.dart';
 import 'mnn_chat_config_screen.dart';
@@ -52,18 +48,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('设置'),
-      ),
+      appBar: AppBar(title: const Text('设置')),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.of(context).padding.bottom,
+          ),
           children: [
             // 应用内AI模型管理
             _buildEmbeddedModelSection(),
@@ -80,10 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '其他设置',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                    Text('其他设置', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 16),
                     SwitchListTile(
                       title: const Text('启用位置服务'),
@@ -102,7 +97,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       value: _settings.autoSaveLocation,
                       onChanged: (value) {
                         setState(() {
-                          _settings = _settings.copyWith(autoSaveLocation: value);
+                          _settings = _settings.copyWith(
+                            autoSaveLocation: value,
+                          );
                         });
                         _onSettingChanged();
                       },
@@ -113,7 +110,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       value: _settings.saveOriginalPhotos,
                       onChanged: (value) {
                         setState(() {
-                          _settings = _settings.copyWith(saveOriginalPhotos: value);
+                          _settings = _settings.copyWith(
+                            saveOriginalPhotos: value,
+                          );
                         });
                         _onSettingChanged();
                       },
@@ -135,7 +134,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // 隐私政策
                     ListTile(
                       contentPadding: EdgeInsets.zero,
@@ -147,7 +146,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       subtitle: Text(
                         '了解我们如何收集、使用和保护您的个人信息',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -162,9 +163,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         );
                       },
                     ),
-                    
+
                     const Divider(),
-                    
+
                     // 用户协议
                     ListTile(
                       contentPadding: EdgeInsets.zero,
@@ -176,7 +177,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       subtitle: Text(
                         '查看使用PlantMeet应用的条款和条件',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -191,9 +194,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         );
                       },
                     ),
-                    
+
                     const Divider(),
-                    
+
                     // 协议状态
                     FutureBuilder<Map<String, dynamic>>(
                       future: PrivacyService.getConsentSummary(),
@@ -201,12 +204,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         final summary = snapshot.data;
                         final isConsented = summary?['is_consented'] ?? false;
                         final consentDate = summary?['consent_date'];
-                        
+
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: Icon(
                             isConsented ? Icons.verified_user : Icons.warning,
-                            color: isConsented 
+                            color: isConsented
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).colorScheme.error,
                           ),
@@ -216,10 +219,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ? '同意时间：${DateTime.parse(consentDate).toLocal().toString().substring(0, 19)}'
                                 : '请阅读并同意用户协议和隐私政策',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
-                          trailing: isConsented 
+                          trailing: isConsented
                               ? TextButton(
                                   onPressed: () => _showRevokeDialog(),
                                   child: const Text('撤回同意'),
@@ -231,15 +236,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         );
                       },
                     ),
-                    
+
                     const SizedBox(height: 8),
-                    
+
                     // 版本信息
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
@@ -247,9 +255,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Text(
                             '协议版本信息',
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -272,7 +279,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   /// 显示撤回同意对话框
   void _showRevokeDialog() {
     showDialog(
@@ -285,7 +292,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             '• 删除您的个人数据\n'
             '• 停止数据收集和处理\n'
             '• 可能影响应用正常使用\n\n'
-            '确定要撤回对用户协议和隐私政策的同意吗？'
+            '确定要撤回对用户协议和隐私政策的同意吗？',
           ),
           actions: [
             TextButton(
@@ -298,9 +305,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 try {
                   await PrivacyService.revokeConsent();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('已撤回同意，应用将重启以应用更改'),
-                    ),
+                    const SnackBar(content: Text('已撤回同意，应用将重启以应用更改')),
                   );
                   // 这里可以重启应用或返回到同意页面
                 } catch (e) {
@@ -322,7 +327,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       },
     );
   }
-  
+
   /// 显示重新同意对话框
   void _showConsentDialog() {
     showDialog(
@@ -332,7 +337,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: const Text('重新同意协议'),
           content: const Text(
             '请重新阅读并同意最新版本的用户协议和隐私政策。\n\n'
-            '这将允许应用正常收集和处理必要的数据以提供服务。'
+            '这将允许应用正常收集和处理必要的数据以提供服务。',
           ),
           actions: [
             TextButton(
@@ -372,10 +377,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.computer,
-                  color: Theme.of(context).primaryColor,
-                ),
+                Icon(Icons.computer, color: Theme.of(context).primaryColor),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -397,13 +399,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Row(
               children: [
                 Icon(
-                  _settings.enableLocalRecognition ? Icons.check_circle : Icons.radio_button_unchecked,
+                  _settings.enableLocalRecognition
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
                   size: 16,
-                  color: _settings.enableLocalRecognition ? Colors.green : Colors.grey,
+                  color: _settings.enableLocalRecognition
+                      ? Colors.green
+                      : Colors.grey,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _settings.enableLocalRecognition ? '已启用，可进行本地识别' : '未启用，点击下方按钮进行配置',
+                  _settings.enableLocalRecognition
+                      ? '已启用，可进行本地识别'
+                      : '未启用，点击下方按钮进行配置',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -436,10 +444,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.cloud,
-                  color: Theme.of(context).primaryColor,
-                ),
+                Icon(Icons.cloud, color: Theme.of(context).primaryColor),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -529,7 +534,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final status = modelService.state.status;
         final isReady = modelService.isModelReady;
         final isDownloaded = modelService.isModelDownloaded;
-        
+
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -563,10 +568,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Row(
                   children: [
                     Icon(
-                      isReady ? Icons.check_circle : (isDownloaded ? Icons.pending : Icons.cloud_download),
+                      isReady
+                          ? Icons.check_circle
+                          : (isDownloaded
+                                ? Icons.pending
+                                : Icons.cloud_download),
                       size: 16,
-                      color: isReady 
-                          ? Colors.green 
+                      color: isReady
+                          ? Colors.green
                           : (isDownloaded ? Colors.orange : Colors.grey),
                     ),
                     const SizedBox(width: 8),
@@ -580,7 +589,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () => Navigator.of(context).pushNamed('/embedded-model-manager'),
+                    onPressed: () => Navigator.of(
+                      context,
+                    ).pushNamed('/embedded-model-manager'),
                     icon: const Icon(Icons.settings),
                     label: const Text('管理AI模型'),
                   ),
@@ -660,6 +671,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return '点击"管理AI模型"下载离线识别模型';
     }
   }
-
-
 }

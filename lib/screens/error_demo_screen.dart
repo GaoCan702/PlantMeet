@@ -7,79 +7,67 @@ class ErrorDemoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('错误消���演示'),
-      ),
+      appBar: AppBar(title: const Text('错误消���演示')),
       body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + MediaQuery.of(context).padding.bottom,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               '错误消息组件演示',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
-            
+
             const Text(
               '1. 可复制的错误消息组件',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
+
             CopyableErrorMessage(
               title: 'API 请求失败',
-              message: 'API请求失败: 401 - {"error": "Unauthorized", "message": "Invalid API key provided"}',
+              message:
+                  'API请求失败: 401 - {"error": "Unauthorized", "message": "Invalid API key provided"}',
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             const Text(
               '2. 简单错误消息',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
-            CopyableErrorMessage(
-              message: '网络连接超时，请检查您的网络设置',
-            ),
-            
+
+            CopyableErrorMessage(message: '网络连接超时，请检查您的网络设置'),
+
             const SizedBox(height: 24),
-            
+
             const Text(
               '3. 技术错误详情',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
+
             CopyableErrorMessage(
               title: '解析错误',
-              message: 'Failed to parse JSON response: Unexpected end of input at line 1 column 15',
+              message:
+                  'Failed to parse JSON response: Unexpected end of input at line 1 column 15',
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             const Text(
               '使用说明：',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
+
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
@@ -97,9 +85,9 @@ class ErrorDemoScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             ElevatedButton(
               onPressed: () {
                 // 演示SnackBar错误消息
@@ -111,9 +99,9 @@ class ErrorDemoScreen extends StatelessWidget {
               },
               child: const Text('显示SnackBar错误消息'),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             ElevatedButton(
               onPressed: () {
                 // 演示错误对话框
@@ -122,7 +110,8 @@ class ErrorDemoScreen extends StatelessWidget {
                   builder: (context) => const ErrorDialog(
                     message: '操作失败，请重试',
                     title: '操作错误',
-                    details: 'Detailed error information with stack trace and technical details that users can copy for debugging purposes.',
+                    details:
+                        'Detailed error information with stack trace and technical details that users can copy for debugging purposes.',
                   ),
                 );
               },

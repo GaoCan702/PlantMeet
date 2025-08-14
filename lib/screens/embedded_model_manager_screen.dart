@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/embedded_model.dart';
 import '../services/embedded_model_service.dart';
-import '../services/app_state.dart';
 import '../widgets/model_download_progress_card.dart';
 import '../widgets/model_status_card.dart';
 import '../widgets/device_compatibility_card.dart';
@@ -13,17 +12,19 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('离线AI模型'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('离线AI模型'), elevation: 0),
       body: Consumer<EmbeddedModelService>(
         builder: (context, modelService, child) {
           return RefreshIndicator(
             onRefresh: () => modelService.initialize(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                16 + MediaQuery.of(context).padding.bottom,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -57,7 +58,10 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderSection(BuildContext context, EmbeddedModelService modelService) {
+  Widget _buildHeaderSection(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -114,16 +118,16 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
 
   Widget _buildFeatureChip(String label, Color color) {
     return Chip(
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 12),
-      ),
-      backgroundColor: color.withOpacity(0.1),
-      side: BorderSide(color: color.withOpacity(0.3)),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      backgroundColor: color.withValues(alpha: 0.1),
+      side: BorderSide(color: color.withValues(alpha: 0.3)),
     );
   }
 
-  Widget _buildStatusSection(BuildContext context, EmbeddedModelService modelService) {
+  Widget _buildStatusSection(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) {
     return ModelStatusCard(
       status: modelService.state.status,
       modelInfo: modelService.modelInfo,
@@ -132,19 +136,29 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDownloadSection(BuildContext context, EmbeddedModelService modelService) {
+  Widget _buildDownloadSection(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) {
     return ModelDownloadProgressCard(
       progress: modelService.downloadProgress,
       currentSource: modelService.state.currentSource,
-      downloadedBytes: (modelService.downloadProgress * 
-          (modelService.modelInfo?.sizeBytes ?? 0)).round(),
+      downloadedBytes:
+          (modelService.downloadProgress *
+                  (modelService.modelInfo?.sizeBytes ?? 0))
+              .round(),
       totalBytes: modelService.modelInfo?.sizeBytes ?? 0,
-      statusMessage: modelService.downloadStatus.isNotEmpty ? modelService.downloadStatus : null,
+      statusMessage: modelService.downloadStatus.isNotEmpty
+          ? modelService.downloadStatus
+          : null,
       onCancel: () => modelService.cancelDownload(),
     );
   }
 
-  Widget _buildDownloadPromptSection(BuildContext context, EmbeddedModelService modelService) {
+  Widget _buildDownloadPromptSection(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -153,10 +167,7 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.download,
-                  color: Theme.of(context).primaryColor,
-                ),
+                Icon(Icons.download, color: Theme.of(context).primaryColor),
                 const SizedBox(width: 8),
                 Text(
                   '获取离线AI模型',
@@ -214,7 +225,10 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildModelReadySection(BuildContext context, EmbeddedModelService modelService) {
+  Widget _buildModelReadySection(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) {
     return Card(
       color: Colors.green.shade50,
       child: Padding(
@@ -224,10 +238,7 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.check_circle,
-                  color: Colors.green.shade600,
-                ),
+                Icon(Icons.check_circle, color: Colors.green.shade600),
                 const SizedBox(width: 8),
                 Text(
                   '模型就绪',
@@ -268,7 +279,10 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildErrorSection(BuildContext context, EmbeddedModelService modelService) {
+  Widget _buildErrorSection(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) {
     return Card(
       color: Colors.red.shade50,
       child: Padding(
@@ -278,16 +292,13 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.error,
-                  color: Colors.red.shade600,
-                ),
+                Icon(Icons.error, color: Colors.red.shade600),
                 const SizedBox(width: 8),
                 Text(
                   '模型错误',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.red.shade700,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: Colors.red.shade700),
                 ),
               ],
             ),
@@ -322,24 +333,27 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCompatibilitySection(BuildContext context, EmbeddedModelService modelService) {
+  Widget _buildCompatibilitySection(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) {
     return DeviceCompatibilityCard(
       capability: modelService.deviceCapability,
       modelInfo: modelService.modelInfo,
     );
   }
 
-  Widget _buildAdvancedSection(BuildContext context, EmbeddedModelService modelService) {
+  Widget _buildAdvancedSection(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '高级选项',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('高级选项', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.storage),
@@ -367,11 +381,14 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showModelDetails(BuildContext context, EmbeddedModelService modelService) async {
+  Future<void> _showModelDetails(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) async {
     final compatibilityReport = await modelService.getCompatibilityReport();
-    
+
     if (!context.mounted) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -387,10 +404,7 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Text('功能：多模态植物识别'),
               const SizedBox(height: 16),
-              Text(
-                '设备兼容性',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
+              Text('设备兼容性', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               Text(compatibilityReport),
             ],
@@ -414,11 +428,17 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _startDownload(BuildContext context, EmbeddedModelService modelService) async {
+  Future<void> _startDownload(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) async {
     await modelService.downloadModel();
   }
 
-  Future<void> _testModel(BuildContext context, EmbeddedModelService modelService) async {
+  Future<void> _testModel(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -441,10 +461,10 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
 
     try {
       final testDuration = await modelService.testInferenceSpeed();
-      
+
       if (!context.mounted) return;
       Navigator.of(context).pop();
-      
+
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -455,9 +475,13 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
             children: [
               Text('预计推理时间：${testDuration.inSeconds}秒'),
               const SizedBox(height: 8),
-              Text('后端：${modelService.deviceCapability?.recommendedBackend.name ?? 'Unknown'}'),
+              Text(
+                '后端：${modelService.deviceCapability?.recommendedBackend.name ?? 'Unknown'}',
+              ),
               const SizedBox(height: 8),
-              Text('设备等级：${modelService.deviceCapability?.isHighEnd == true ? '高端' : '中低端'}'),
+              Text(
+                '设备等级：${modelService.deviceCapability?.isHighEnd == true ? '高端' : '中低端'}',
+              ),
             ],
           ),
           actions: [
@@ -471,18 +495,21 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
       Navigator.of(context).pop();
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('性能测试失败：$e')),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('性能测试失败：$e')));
     }
   }
 
-  Future<void> _showStorageInfo(BuildContext context, EmbeddedModelService modelService) async {
+  Future<void> _showStorageInfo(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) async {
     final stats = await modelService.getModelStats();
-    
+
     if (!context.mounted) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -508,7 +535,10 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDeleteModel(BuildContext context, EmbeddedModelService modelService) async {
+  Future<void> _confirmDeleteModel(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -533,16 +563,19 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
 
     if (confirm == true) {
       await modelService.deleteModel();
-      
+
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('模型已删除')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('模型已删除')));
       }
     }
   }
 
-  Future<void> _showErrorHelp(BuildContext context, EmbeddedModelService modelService) async {
+  Future<void> _showErrorHelp(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) async {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

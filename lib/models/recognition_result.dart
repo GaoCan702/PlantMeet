@@ -4,27 +4,27 @@
 class RecognitionResult {
   // 基础识别信息
   final String id;
-  final String name;           // 通俗易懂的中文名
-  final String? nickname;      // 别名/俗名
-  final double confidence;     // 置信度(0-1)
-  
+  final String name; // 通俗易懂的中文名
+  final String? nickname; // 别名/俗名
+  final double confidence; // 置信度(0-1)
+
   // 生活化描述
-  final String description;    // 生动的植物描述
+  final String description; // 生动的植物描述
   final List<String> features; // 关键特征（简单易懂）
-  
+
   // 实用信息
-  final SafetyInfo safety;     // 安全信息
-  final CareInfo? care;        // 养护建议
-  final String? season;        // 常见季节
+  final SafetyInfo safety; // 安全信息
+  final CareInfo? care; // 养护建议
+  final String? season; // 常见季节
   final List<String> locations; // 常见地点
-  
+
   // 趣味信息
-  final String? funFact;       // 有趣小知识
-  final List<String> tags;     // 标签（如：观叶植物、室内植物）
-  
+  final String? funFact; // 有趣小知识
+  final List<String> tags; // 标签（如：观叶植物、室内植物）
+
   // 可选学术信息（默认隐藏）
   final String? scientificName; // 学名（高级用户可查看）
-  final String? family;         // 科属（可选）
+  final String? family; // 科属（可选）
 
   RecognitionResult({
     required this.id,
@@ -42,7 +42,7 @@ class RecognitionResult {
     this.scientificName,
     this.family,
   });
-  
+
   /// 用户友好的置信度描述
   String get confidenceText {
     if (confidence >= 0.8) return '很确定';
@@ -50,10 +50,10 @@ class RecognitionResult {
     if (confidence >= 0.4) return '可能是';
     return '不太确定';
   }
-  
+
   /// 是否是常见植物
   bool get isCommon => confidence >= 0.6;
-  
+
   /// 生成用户友好的总结
   String get summary {
     final sb = StringBuffer();
@@ -103,16 +103,16 @@ class RecognitionResult {
 
 /// 安全信息 - 重点关注
 class SafetyInfo {
-  final SafetyLevel level;    // 安全等级
-  final String description;   // 安全说明
+  final SafetyLevel level; // 安全等级
+  final String description; // 安全说明
   final List<String> warnings; // 具体警告
-  
+
   const SafetyInfo({
     required this.level,
     required this.description,
     required this.warnings,
   });
-  
+
   factory SafetyInfo.fromJson(Map<String, dynamic> json) {
     return SafetyInfo(
       level: SafetyLevel.values.firstWhere(
@@ -123,7 +123,7 @@ class SafetyInfo {
       warnings: List<String>.from(json['warnings'] as List),
     );
   }
-  
+
   Map<String, dynamic> toJson() {
     return {
       'level': level.toString().split('.').last,
@@ -134,21 +134,21 @@ class SafetyInfo {
 }
 
 enum SafetyLevel {
-  safe,        // 安全
-  caution,     // 小心（如有刺）
-  toxic,       // 有毒
-  dangerous,   // 危险
-  unknown,     // 未知
+  safe, // 安全
+  caution, // 小心（如有刺）
+  toxic, // 有毒
+  dangerous, // 危险
+  unknown, // 未知
 }
 
 /// 养护信息 - 生活化建议
 class CareInfo {
-  final String difficulty;    // 养护难度：简单/适中/困难
-  final String water;        // 浇水：多浇水/适量/少浇水
-  final String light;        // 光照：喜阳/半阴/耐阴
-  final String temperature;  // 温度要求
-  final List<String> tips;   // 养护小贴士
-  
+  final String difficulty; // 养护难度：简单/适中/困难
+  final String water; // 浇水：多浇水/适量/少浇水
+  final String light; // 光照：喜阳/半阴/耐阴
+  final String temperature; // 温度要求
+  final List<String> tips; // 养护小贴士
+
   const CareInfo({
     required this.difficulty,
     required this.water,
@@ -156,7 +156,7 @@ class CareInfo {
     required this.temperature,
     required this.tips,
   });
-  
+
   factory CareInfo.fromJson(Map<String, dynamic> json) {
     return CareInfo(
       difficulty: json['difficulty'] as String,
@@ -166,7 +166,7 @@ class CareInfo {
       tips: List<String>.from(json['tips'] as List),
     );
   }
-  
+
   Map<String, dynamic> toJson() {
     return {
       'difficulty': difficulty,
@@ -224,18 +224,18 @@ class RecognitionResponse {
     if (results.isEmpty) return null;
     return results.first;
   }
-  
+
   /// 获取备选结果（最多3个）
   List<RecognitionResult> get alternatives {
     if (results.length <= 1) return [];
     return results.skip(1).take(2).toList();
   }
-  
+
   /// 用户友好的结果总结
   String get summary {
     if (!success) return '识别失败，请重新尝试';
     if (results.isEmpty) return '未找到匹配的植物';
-    
+
     final best = bestMatch!;
     final sb = StringBuffer();
     sb.write('🌱 ${best.summary}');
@@ -250,10 +250,10 @@ class RecognitionResponse {
 /// 识别方法 - 用户友好的显示
 enum RecognitionMethod {
   embedded, // 应用内模型识别
-  local,    // 本地识别 (MNN Chat)
-  cloud,    // 云端识别
-  hybrid,   // 混合识别
-  manual,   // 手动输入
+  local, // 本地识别 (MNN Chat)
+  cloud, // 云端识别
+  hybrid, // 混合识别
+  manual, // 手动输入
 }
 
 extension RecognitionMethodExtension on RecognitionMethod {
@@ -271,7 +271,7 @@ extension RecognitionMethodExtension on RecognitionMethod {
         return '手动输入';
     }
   }
-  
+
   String get description {
     switch (this) {
       case RecognitionMethod.embedded:

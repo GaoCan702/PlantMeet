@@ -42,10 +42,7 @@ class PDFExportService {
                   ),
                 ),
                 pw.SizedBox(height: 40),
-                pw.Text(
-                  '我的植物图鉴',
-                  style: pw.TextStyle(fontSize: 20),
-                ),
+                pw.Text('我的植物图鉴', style: pw.TextStyle(fontSize: 20)),
                 pw.SizedBox(height: 20),
                 pw.Text(
                   '导出时间: ${dateFormat.format(DateTime.now())}',
@@ -84,7 +81,7 @@ class PDFExportService {
                   final index = entry.key;
                   final plant = entry.value;
                   final encounters = encountersMap[plant.id] ?? [];
-                  
+
                   return pw.Container(
                     margin: const pw.EdgeInsets.only(bottom: 8),
                     child: pw.Row(
@@ -111,7 +108,7 @@ class PDFExportService {
     for (int i = 0; i < species.length; i++) {
       final plant = species[i];
       final encounters = encountersMap[plant.id] ?? [];
-      
+
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -136,7 +133,7 @@ class PDFExportService {
                   ),
                 ),
                 pw.SizedBox(height: 16),
-                
+
                 // 基本信息
                 pw.Container(
                   padding: const pw.EdgeInsets.all(12),
@@ -157,8 +154,12 @@ class PDFExportService {
                       pw.SizedBox(height: 8),
                       pw.Text('遇见次数: ${encounters.length}次'),
                       if (encounters.isNotEmpty) ...[
-                        pw.Text('首次遇见: ${dateFormat.format(encounters.last.encounterDate)}'),
-                        pw.Text('最近遇见: ${dateFormat.format(encounters.first.encounterDate)}'),
+                        pw.Text(
+                          '首次遇见: ${dateFormat.format(encounters.last.encounterDate)}',
+                        ),
+                        pw.Text(
+                          '最近遇见: ${dateFormat.format(encounters.first.encounterDate)}',
+                        ),
                       ],
                       if (plant.isToxic == true) ...[
                         pw.SizedBox(height: 4),
@@ -170,7 +171,7 @@ class PDFExportService {
                     ],
                   ),
                 ),
-                
+
                 // 描述
                 if (plant.description != null) ...[
                   pw.SizedBox(height: 16),
@@ -184,7 +185,7 @@ class PDFExportService {
                   pw.SizedBox(height: 8),
                   pw.Text(plant.description!),
                 ],
-                
+
                 // 毒性信息
                 if (plant.toxicityInfo != null) ...[
                   pw.SizedBox(height: 16),
@@ -215,7 +216,7 @@ class PDFExportService {
                     ),
                   ),
                 ],
-                
+
                 // 遇见记录
                 if (encounters.isNotEmpty) ...[
                   pw.SizedBox(height: 16),
@@ -242,7 +243,9 @@ class PDFExportService {
                             children: [
                               pw.Text(
                                 dateFormat.format(encounter.encounterDate),
-                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                                style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
                               ),
                               pw.Spacer(),
                               pw.Text(
@@ -267,7 +270,10 @@ class PDFExportService {
                     pw.SizedBox(height: 8),
                     pw.Text(
                       '... 还有 ${encounters.length - 10} 条记录',
-                      style: pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        color: PdfColors.grey600,
+                      ),
                     ),
                   ],
                 ],
@@ -279,9 +285,11 @@ class PDFExportService {
     }
 
     // 添加统计页
-    final totalEncounters = encountersMap.values
-        .fold<int>(0, (sum, encounters) => sum + encounters.length);
-    
+    final totalEncounters = encountersMap.values.fold<int>(
+      0,
+      (sum, encounters) => sum + encounters.length,
+    );
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -310,16 +318,24 @@ class PDFExportService {
                     pw.SizedBox(height: 8),
                     pw.Text('总计遇见记录: $totalEncounters 次'),
                     pw.SizedBox(height: 8),
-                    pw.Text('平均每种植物遇见: ${(totalEncounters / species.length.clamp(1, double.infinity)).toStringAsFixed(1)} 次'),
+                    pw.Text(
+                      '平均每种植物遇见: ${(totalEncounters / species.length.clamp(1, double.infinity)).toStringAsFixed(1)} 次',
+                    ),
                     pw.SizedBox(height: 16),
                     pw.Text(
                       '导出时间: ${DateFormat('yyyy年MM月dd日 HH:mm').format(DateTime.now())}',
-                      style: pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        color: PdfColors.grey600,
+                      ),
                     ),
                     pw.SizedBox(height: 8),
                     pw.Text(
                       '由PlantMeet生成',
-                      style: pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        color: PdfColors.grey600,
+                      ),
                     ),
                   ],
                 ),
@@ -332,7 +348,8 @@ class PDFExportService {
 
     // 保存PDF文件
     final output = await getApplicationDocumentsDirectory();
-    final fileName = 'PlantMeet_植物图鉴_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf';
+    final fileName =
+        'PlantMeet_植物图鉴_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf';
     final file = File('${output.path}/$fileName');
     await file.writeAsBytes(await pdf.save());
 
@@ -386,19 +403,31 @@ class PDFExportService {
                     children: [
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text('中文名', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        child: pw.Text(
+                          '中文名',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text('学名', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        child: pw.Text(
+                          '学名',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text('遇见次数', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        child: pw.Text(
+                          '遇见次数',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
                       ),
                       pw.Padding(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text('状态', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        child: pw.Text(
+                          '状态',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
                       ),
                     ],
                   ),
@@ -434,7 +463,8 @@ class PDFExportService {
     );
 
     final output = await getApplicationDocumentsDirectory();
-    final fileName = 'PlantMeet_速览_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf';
+    final fileName =
+        'PlantMeet_速览_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf';
     final file = File('${output.path}/$fileName');
     await file.writeAsBytes(await pdf.save());
 

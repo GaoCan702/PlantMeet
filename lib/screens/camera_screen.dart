@@ -38,7 +38,7 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void> _checkPermissions() async {
     final cameraGranted = await _permissionService.checkCameraPermission();
     final storageGranted = await _permissionService.checkStoragePermission();
-    
+
     setState(() {
       _hasPermissions = cameraGranted && storageGranted;
     });
@@ -50,7 +50,7 @@ class _CameraScreenState extends State<CameraScreen> {
       _showRecognitionServiceRequiredDialog();
       return;
     }
-    
+
     if (!_hasPermissions) {
       await _requestPermissions();
       return;
@@ -61,7 +61,7 @@ class _CameraScreenState extends State<CameraScreen> {
         source: ImageSource.camera,
         imageQuality: 85,
       );
-      
+
       if (image != null) {
         setState(() {
           _imagePath = image.path;
@@ -78,7 +78,7 @@ class _CameraScreenState extends State<CameraScreen> {
       _showRecognitionServiceRequiredDialog();
       return;
     }
-    
+
     if (!_hasPermissions) {
       await _requestPermissions();
       return;
@@ -89,7 +89,7 @@ class _CameraScreenState extends State<CameraScreen> {
         source: ImageSource.gallery,
         imageQuality: 85,
       );
-      
+
       if (image != null) {
         setState(() {
           _imagePath = image.path;
@@ -150,12 +150,15 @@ class _CameraScreenState extends State<CameraScreen> {
     final availableMethods = _recognitionService.getAvailableMethods();
     final appState = Provider.of<AppState>(context, listen: false);
     final settings = appState.settings ?? AppSettings();
-    
+
     // 检查是否有至少一个可用的识别方法
-    return availableMethods.any((method) => 
-      method == RecognitionMethod.embedded && _recognitionService.isMethodAvailable(method) ||
-      method == RecognitionMethod.local && _recognitionService.isMethodAvailable(method) ||
-      method == RecognitionMethod.cloud && settings.isConfigured
+    return availableMethods.any(
+      (method) =>
+          method == RecognitionMethod.embedded &&
+              _recognitionService.isMethodAvailable(method) ||
+          method == RecognitionMethod.local &&
+              _recognitionService.isMethodAvailable(method) ||
+          method == RecognitionMethod.cloud && settings.isConfigured,
     );
   }
 
@@ -169,7 +172,7 @@ class _CameraScreenState extends State<CameraScreen> {
           '• 下载应用内AI模型进行离线识别\n'
           '• 启动MNN Chat进行本地识别\n'
           '• 配置云端API密钥\n\n'
-          '至少需要配置一种方法才能进行植物识别。'
+          '至少需要配置一种方法才能进行植物识别。',
         ),
         actions: [
           TextButton(
@@ -189,22 +192,15 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   void _showError(String message) {
-    ErrorSnackBar.show(
-      context,
-      message: message,
-      title: '错误',
-    );
+    ErrorSnackBar.show(context, message: message, title: '错误');
   }
 
   void _showDetailedError(String message, String? details) {
     if (details != null && details.isNotEmpty) {
       showDialog(
         context: context,
-        builder: (context) => ErrorDialog(
-          message: message,
-          title: '识别失败',
-          details: details,
-        ),
+        builder: (context) =>
+            ErrorDialog(message: message, title: '识别失败', details: details),
       );
     } else {
       _showError(message);
@@ -213,10 +209,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
     );
   }
 
@@ -230,14 +223,17 @@ class _CameraScreenState extends State<CameraScreen> {
     try {
       final appState = Provider.of<AppState>(context, listen: false);
       final settings = appState.settings ?? AppSettings();
-      
+
       if (!_hasAvailableRecognitionMethod()) {
         _showError('当前没有可用的识别服务，请在设置中配置或启用识别方法');
         return;
       }
 
       final imageFile = File(_imagePath!);
-      final response = await _recognitionService.identifyPlant(imageFile, settings);
+      final response = await _recognitionService.identifyPlant(
+        imageFile,
+        settings,
+      );
 
       if (!response.success) {
         _showDetailedError('识别失败', response.error);
@@ -251,7 +247,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
       final topResult = response.results.first;
       final now = DateTime.now();
-      
+
       // 创建或获取植物物种
       final species = PlantSpecies(
         id: topResult.id,
@@ -259,13 +255,13 @@ class _CameraScreenState extends State<CameraScreen> {
         commonName: topResult.name,
         description: topResult.description,
         isToxic: topResult.safety.level == SafetyLevel.toxic,
-        toxicityInfo: topResult.safety.warnings.isNotEmpty 
-            ? topResult.safety.warnings.first 
+        toxicityInfo: topResult.safety.warnings.isNotEmpty
+            ? topResult.safety.warnings.first
             : null,
         createdAt: now,
         updatedAt: now,
       );
-      
+
       // 创建遇见记录
       final encounter = PlantEncounter(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -273,16 +269,17 @@ class _CameraScreenState extends State<CameraScreen> {
         encounterDate: now,
         location: null,
         photoPaths: [_imagePath!],
-        notes: '通过${response.method == RecognitionMethod.local ? '本地' : '云端'}识别',
+        notes:
+            '通过${response.method == RecognitionMethod.local ? '本地' : '云端'}识别',
         source: RecognitionSource.camera,
         method: response.method,
         createdAt: now,
         updatedAt: now,
       );
-      
+
       // 智能保存到数据库（自动去重）
       await appState.addRecognitionResult(species, encounter);
-      
+
       _showSuccess('识别完成！已识别为: ${topResult.name}');
       Navigator.pop(context);
     } catch (e) {
@@ -299,50 +296,30 @@ class _CameraScreenState extends State<CameraScreen> {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.lock,
-            size: 80,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.lock, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          Text(
-            '需要权限才能使用相机',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('需要权限才能使用相机', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          Text(
-            '请授权相机和存储权限',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          Text('请授权相机和存储权限', style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: _requestPermissions,
             icon: const Icon(Icons.security),
             label: const Text('请求权限'),
             style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
         ],
       );
     }
-    
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.camera_alt,
-          size: 80,
-          color: Colors.grey[400],
-        ),
+        Icon(Icons.camera_alt, size: 80, color: Colors.grey[400]),
         const SizedBox(height: 16),
-        Text(
-          '选择拍照或从相册选择',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+        Text('选择拍照或从相册选择', style: Theme.of(context).textTheme.titleLarge),
       ],
     );
   }
@@ -351,96 +328,90 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('识别植物'),
-      ),
+      appBar: AppBar(title: const Text('识别植物')),
       body: Column(
-          children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                child: _imagePath == null
-                    ? _buildPermissionUI()
-                    : Image.file(
-                        File(_imagePath!),
-                        fit: BoxFit.cover,
-                      ),
-              ),
+        children: [
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              child: _imagePath == null
+                  ? _buildPermissionUI()
+                  : Image.file(File(_imagePath!), fit: BoxFit.cover),
             ),
-            Container(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                16 + MediaQuery.of(context).padding.bottom,
-              ),
-              child: Column(
-                children: [
-                  if (_imagePath == null) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _takePicture,
-                            icon: const Icon(Icons.camera_alt),
-                            label: const Text('拍照'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
+          ),
+          Container(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 + MediaQuery.of(context).padding.bottom,
+            ),
+            child: Column(
+              children: [
+                if (_imagePath == null) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _takePicture,
+                          icon: const Icon(Icons.camera_alt),
+                          label: const Text('拍照'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _pickFromGallery,
-                            icon: const Icon(Icons.photo_library),
-                            label: const Text('相册'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ] else ...[
-                    if (_isProcessing)
-                      const Column(
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text('正在识别中...'),
-                        ],
-                      )
-                    else
-                      ElevatedButton.icon(
-                        onPressed: _identifyPlant,
-                        icon: const Icon(Icons.search),
-                        label: const Text('开始识别'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          minimumSize: const Size(double.infinity, 0),
                         ),
                       ),
-                    const SizedBox(height: 16),
-                    OutlinedButton(
-                      onPressed: () {
-                        setState(() {
-                          _imagePath = null;
-                        });
-                      },
-                      child: const Text('重新选择'),
-                      style: OutlinedButton.styleFrom(
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _pickFromGallery,
+                          icon: const Icon(Icons.photo_library),
+                          label: const Text('相册'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  if (_isProcessing)
+                    const Column(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('正在识别中...'),
+                      ],
+                    )
+                  else
+                    ElevatedButton.icon(
+                      onPressed: _identifyPlant,
+                      icon: const Icon(Icons.search),
+                      label: const Text('开始识别'),
+                      style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         minimumSize: const Size(double.infinity, 0),
                       ),
                     ),
-                  ],
+                  const SizedBox(height: 16),
+                  OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _imagePath = null;
+                      });
+                    },
+                    child: const Text('重新选择'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      minimumSize: const Size(double.infinity, 0),
+                    ),
+                  ),
                 ],
-              ),
+              ],
             ),
-          ],
+          ),
+        ],
       ),
     );
   }
-
 }

@@ -29,10 +29,7 @@ class ModelDownloadProgressCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.downloading,
-                  color: Theme.of(context).primaryColor,
-                ),
+                Icon(Icons.downloading, color: Theme.of(context).primaryColor),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -116,9 +113,9 @@ class ModelDownloadProgressCard extends StatelessWidget {
             ),
             Text(
               _formatBytes(remainingBytes),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -133,9 +130,9 @@ class ModelDownloadProgressCard extends StatelessWidget {
             ),
             Text(
               estimatedTimeMinutes,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -149,10 +146,10 @@ class ModelDownloadProgressCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Theme.of(context).primaryColor.withOpacity(0.3),
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -181,10 +178,7 @@ class ModelDownloadProgressCard extends StatelessWidget {
     return Container(
       width: 8,
       height: 8,
-      decoration: BoxDecoration(
-        color: Colors.green,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: Colors.green, shape: BoxShape.circle),
     );
   }
 
@@ -208,7 +202,8 @@ class ModelDownloadProgressCard extends StatelessWidget {
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
@@ -216,11 +211,11 @@ class ModelDownloadProgressCard extends StatelessWidget {
     // Estimate based on typical download speeds
     // This is a rough estimation - in practice you'd calculate based on actual speed
     const averageSpeedBytesPerSecond = 5 * 1024 * 1024; // 5 MB/s
-    
+
     if (remainingBytes <= 0) return '完成';
-    
+
     final remainingSeconds = remainingBytes / averageSpeedBytesPerSecond;
-    
+
     if (remainingSeconds < 60) {
       return '${remainingSeconds.round()}秒';
     } else if (remainingSeconds < 3600) {

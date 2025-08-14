@@ -5,11 +5,7 @@ class DeviceCompatibilityCard extends StatelessWidget {
   final DeviceCapability? capability;
   final ModelInfo? modelInfo;
 
-  const DeviceCompatibilityCard({
-    super.key,
-    this.capability,
-    this.modelInfo,
-  });
+  const DeviceCompatibilityCard({super.key, this.capability, this.modelInfo});
 
   @override
   Widget build(BuildContext context) {
@@ -46,10 +42,7 @@ class DeviceCompatibilityCard extends StatelessWidget {
                   color: isCompatible ? Colors.green : Colors.orange,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  '设备兼容性',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+                Text('设备兼容性', style: Theme.of(context).textTheme.titleMedium),
                 const Spacer(),
                 _buildCompatibilityBadge(context, isCompatible),
               ],
@@ -70,17 +63,13 @@ class DeviceCompatibilityCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isCompatible 
-            ? Colors.green.shade100 
-            : Colors.orange.shade100,
+        color: isCompatible ? Colors.green.shade100 : Colors.orange.shade100,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         isCompatible ? '兼容' : '部分兼容',
         style: TextStyle(
-          color: isCompatible 
-              ? Colors.green.shade700 
-              : Colors.orange.shade700,
+          color: isCompatible ? Colors.green.shade700 : Colors.orange.shade700,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
@@ -143,18 +132,15 @@ class DeviceCompatibilityCard extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           flex: 2,
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
         ),
         Expanded(
           flex: 3,
           child: Text(
             value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
           ),
         ),
         Expanded(
@@ -199,13 +185,15 @@ class DeviceCompatibilityCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          ..._getRecommendationsList().map((recommendation) => Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              '• $recommendation',
-              style: Theme.of(context).textTheme.bodySmall,
+          ..._getRecommendationsList().map(
+            (recommendation) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                '• $recommendation',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ),
-          )),
+          ),
         ],
       ),
     );
@@ -213,10 +201,10 @@ class DeviceCompatibilityCard extends StatelessWidget {
 
   bool _checkCompatibility() {
     if (capability == null) return false;
-    
-    return _checkRamRequirement() && 
-           _checkStorageRequirement() &&
-           capability!.estimatedInferenceTime.inSeconds <= 30;
+
+    return _checkRamRequirement() &&
+        _checkStorageRequirement() &&
+        capability!.estimatedInferenceTime.inSeconds <= 30;
   }
 
   bool _checkRamRequirement() {
@@ -231,27 +219,27 @@ class DeviceCompatibilityCard extends StatelessWidget {
 
   List<String> _getRecommendationsList() {
     final recommendations = <String>[];
-    
+
     if (!_checkRamRequirement()) {
       recommendations.add('关闭其他应用以释放内存');
       recommendations.add('重启设备后重试');
     }
-    
+
     if (!_checkStorageRequirement()) {
       recommendations.add('清理设备存储空间');
       recommendations.add('删除不必要的文件和应用');
     }
-    
+
     if (capability!.estimatedInferenceTime.inSeconds > 20) {
       recommendations.add('首次推理可能较慢，后续会加快');
       recommendations.add('确保设备电量充足');
     }
-    
+
     if (!capability!.isHighEnd) {
       recommendations.add('考虑在WiFi环境下使用以获得更好体验');
       recommendations.add('可选择使用云端识别作为补充');
     }
-    
+
     return recommendations;
   }
 

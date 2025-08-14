@@ -24,7 +24,7 @@ class PermissionService {
     final cameraStatus = await requestCameraPermission();
     final storageStatus = await requestStoragePermission();
     final locationStatus = await requestLocationPermission();
-    
+
     return cameraStatus && storageStatus && locationStatus;
   }
 

@@ -7,7 +7,7 @@ import '../services/privacy_service.dart';
 
 class AppState extends ChangeNotifier {
   final DatabaseService databaseService;
-  
+
   AppSettings? _settings;
   List<PlantSpecies> _species = [];
   List<PlantEncounter> _encounters = [];
@@ -23,7 +23,7 @@ class AppState extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   PolicyConsent? get policyConsent => _policyConsent;
-  
+
   // 检查是否已配置识别服务
   bool get isConfigured {
     return _settings?.isConfigured ?? false;
@@ -35,7 +35,7 @@ class AppState extends ChangeNotifier {
       // 首先初始化隐私守卫
       await PrivacyService.initialize();
       _policyConsent = await PrivacyService.getUserConsent();
-      
+
       // 只有在用户同意隐私政策后才加载设置和数据
       if (_policyConsent?.isFullyConsented == true) {
         _settings = await databaseService.getSettings() ?? AppSettings();
@@ -103,7 +103,7 @@ class AppState extends ChangeNotifier {
 
   // 智能添加识别结果，实现去重逻辑
   Future<void> addRecognitionResult(
-    PlantSpecies species, 
+    PlantSpecies species,
     PlantEncounter encounter,
   ) async {
     _setLoading(true);
@@ -115,11 +115,11 @@ class AppState extends ChangeNotifier {
       );
 
       String finalSpeciesId;
-      
+
       if (existingSpecies != null) {
         // 物种已存在，更新现有记录
         finalSpeciesId = existingSpecies.id;
-        
+
         // 更新物种信息（可能有新的描述或毒性信息）
         final updatedSpecies = existingSpecies.copyWith(
           description: species.description ?? existingSpecies.description,
@@ -127,7 +127,7 @@ class AppState extends ChangeNotifier {
           toxicityInfo: species.toxicityInfo ?? existingSpecies.toxicityInfo,
           updatedAt: DateTime.now(),
         );
-        
+
         await databaseService.updateSpecies(updatedSpecies);
       } else {
         // 新物种，直接创建
@@ -136,10 +136,8 @@ class AppState extends ChangeNotifier {
       }
 
       // 2. 创建新的遇见记录，使用最终的物种ID
-      final finalEncounter = encounter.copyWith(
-        speciesId: finalSpeciesId,
-      );
-      
+      final finalEncounter = encounter.copyWith(speciesId: finalSpeciesId);
+
       await databaseService.createEncounter(finalEncounter);
 
       // 3. 重新加载数据
@@ -179,7 +177,7 @@ class AppState extends ChangeNotifier {
   DateTime? getSpeciesFirstEncounter(String speciesId) {
     final encounters = getSpeciesEncounters(speciesId);
     if (encounters.isEmpty) return null;
-    
+
     encounters.sort((a, b) => a.encounterDate.compareTo(b.encounterDate));
     return encounters.first.encounterDate;
   }
@@ -187,7 +185,7 @@ class AppState extends ChangeNotifier {
   DateTime? getSpeciesLastEncounter(String speciesId) {
     final encounters = getSpeciesEncounters(speciesId);
     if (encounters.isEmpty) return null;
-    
+
     encounters.sort((a, b) => b.encounterDate.compareTo(a.encounterDate));
     return encounters.first.encounterDate;
   }
@@ -197,8 +195,11 @@ class AppState extends ChangeNotifier {
   }
 
   List<PlantSpecies> getSpeciesWithEncounters() {
-    return _species.where((species) => 
-      _encounters.any((encounter) => encounter.speciesId == species.id)
-    ).toList();
+    return _species
+        .where(
+          (species) =>
+              _encounters.any((encounter) => encounter.speciesId == species.id),
+        )
+        .toList();
   }
 }

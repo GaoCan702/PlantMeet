@@ -40,7 +40,7 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
 
   Future<void> _autoSaveSettings() async {
     final appState = Provider.of<AppState>(context, listen: false);
-    
+
     final updatedSettings = _settings.copyWith(
       baseUrl: _baseUrlController.text.isEmpty ? null : _baseUrlController.text,
       apiKey: _apiKeyController.text.isEmpty ? null : _apiKeyController.text,
@@ -61,13 +61,16 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('MNN Chat服务'),
-      ),
+      appBar: AppBar(title: const Text('MNN Chat服务')),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.of(context).padding.bottom,
+          ),
           children: [
             _buildHeaderSection(),
             const SizedBox(height: 24),
@@ -139,12 +142,9 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
 
   Widget _buildFeatureChip(String label, Color color) {
     return Chip(
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 12),
-      ),
-      backgroundColor: color.withOpacity(0.1),
-      side: BorderSide(color: color.withOpacity(0.3)),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      backgroundColor: color.withValues(alpha: 0.1),
+      side: BorderSide(color: color.withValues(alpha: 0.3)),
     );
   }
 
@@ -155,10 +155,7 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '服务配置',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('服务配置', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             SwitchListTile(
               title: const Text('启用MNN Chat服务'),
@@ -183,7 +180,8 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
                 _onSettingChanged();
               },
               validator: (value) {
-                if (_settings.enableLocalRecognition && (value == null || value.isEmpty)) {
+                if (_settings.enableLocalRecognition &&
+                    (value == null || value.isEmpty)) {
                   return '启用MNN Chat服务需要配置API地址';
                 }
                 return null;
@@ -227,16 +225,13 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '连接测试',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('连接测试', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               '测试与MNN Chat服务的连接状态',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 16),
             Row(
@@ -244,7 +239,7 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: _isTesting ? null : _testConnection,
-                    icon: _isTesting 
+                    icon: _isTesting
                         ? const SizedBox(
                             width: 18,
                             height: 18,
@@ -257,7 +252,7 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _settings.enableLocalRecognition 
+                    onPressed: _settings.enableLocalRecognition
                         ? () => _openTestScreen()
                         : null,
                     icon: const Icon(Icons.science),
@@ -279,26 +274,23 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '高级选项',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('高级选项', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.info_outline),
               title: const Text('服务状态'),
               subtitle: Text(
-                _settings.enableLocalRecognition 
+                _settings.enableLocalRecognition
                     ? 'MNN Chat服务已启用'
                     : 'MNN Chat服务已禁用',
               ),
               trailing: Icon(
-                _settings.enableLocalRecognition 
-                    ? Icons.check_circle 
+                _settings.enableLocalRecognition
+                    ? Icons.check_circle
                     : Icons.radio_button_unchecked,
-                color: _settings.enableLocalRecognition 
-                    ? Colors.green 
+                color: _settings.enableLocalRecognition
+                    ? Colors.green
                     : Colors.grey,
               ),
             ),
@@ -319,27 +311,21 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
 
   Future<void> _testConnection() async {
     if (!_formKey.currentState!.validate()) {
-      ErrorSnackBar.show(
-        context,
-        message: '请先填写必要配置信息',
-        title: '配置错误',
-      );
+      ErrorSnackBar.show(context, message: '请先填写必要配置信息', title: '配置错误');
       return;
     }
 
     if (!_settings.enableLocalRecognition) {
-      ErrorSnackBar.show(
-        context,
-        message: '请先启用MNN Chat服务',
-        title: '配置错误',
-      );
+      ErrorSnackBar.show(context, message: '请先启用MNN Chat服务', title: '配置错误');
       return;
     }
 
     setState(() {
       _isTesting = true;
       _settings = _settings.copyWith(
-        baseUrl: _baseUrlController.text.isEmpty ? null : _baseUrlController.text,
+        baseUrl: _baseUrlController.text.isEmpty
+            ? null
+            : _baseUrlController.text,
         apiKey: _apiKeyController.text.isEmpty ? null : _apiKeyController.text,
       );
     });
@@ -366,11 +352,7 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ErrorSnackBar.show(
-          context,
-          message: '连接测试异常：$e',
-          title: '测试异常',
-        );
+        ErrorSnackBar.show(context, message: '连接测试异常：$e', title: '测试异常');
       }
     } finally {
       if (mounted) {
@@ -384,9 +366,7 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
   void _openTestScreen() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => MNNChatTestScreen(
-          appSettings: _settings,
-        ),
+        builder: (context) => MNNChatTestScreen(appSettings: _settings),
       ),
     );
   }

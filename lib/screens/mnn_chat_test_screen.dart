@@ -10,10 +10,8 @@ import '../models/recognition_result.dart';
 class MNNChatTestScreen extends StatefulWidget {
   final AppSettings appSettings;
 
-  const MNNChatTestScreen({
-    Key? key,
-    required this.appSettings,
-  }) : super(key: key);
+  const MNNChatTestScreen({Key? key, required this.appSettings})
+    : super(key: key);
 
   @override
   State<MNNChatTestScreen> createState() => _MNNChatTestScreenState();
@@ -22,38 +20,38 @@ class MNNChatTestScreen extends StatefulWidget {
 class _MNNChatTestScreenState extends State<MNNChatTestScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
-  
+
   // 服务和状态
   MNNChatService? _mnnChatService;
   bool _isConnecting = false;
   bool _isTesting = false;
   Map<String, dynamic> _connectionStatus = {};
-  
+
   // 测试相关
   File? _selectedImage;
   TestImageInfo? _selectedPresetImage;
   String _customPrompt = '';
   bool _quickMode = false;
-  
+
   // 日志和结果
   final List<TestLogEntry> _testLogs = [];
   final ScrollController _logScrollController = ScrollController();
   RecognitionResponse? _lastResult;
-  
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _mnnChatService = MNNChatService();
     _customPrompt = _getDefaultPrompt();
-    
+
     // 初始化测试图片管理器
     TestImageManager.initializePresetImages().then((_) {
       if (mounted) {
         setState(() {});
       }
     });
-    
+
     // 初始化MNN Chat连接
     _initializeConnection();
   }
@@ -65,26 +63,29 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
     _mnnChatService?.dispose();
     super.dispose();
   }
-  
+
   /// 初始化MNN Chat连接
   Future<void> _initializeConnection() async {
     setState(() {
       _isConnecting = true;
       _addLog('正在连接MNN Chat服务...', LogLevel.info);
     });
-    
+
     try {
       final success = await _mnnChatService!.initialize();
       _connectionStatus = _mnnChatService!.getStatus();
-      
+
       _addLog(
-        success ? 'MNN Chat连接成功' : 'MNN Chat连接失败', 
-        success ? LogLevel.success : LogLevel.error
+        success ? 'MNN Chat连接成功' : 'MNN Chat连接失败',
+        success ? LogLevel.success : LogLevel.error,
       );
-      
+
       if (success) {
         _addLog('模型: ${_connectionStatus['target_model']}', LogLevel.info);
-        _addLog('视觉支持: ${_connectionStatus['features']['vision_support']}', LogLevel.info);
+        _addLog(
+          '视觉支持: ${_connectionStatus['features']['vision_support']}',
+          LogLevel.info,
+        );
       }
     } catch (e) {
       _addLog('连接异常: $e', LogLevel.error);
@@ -95,7 +96,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       });
     }
   }
-  
+
   /// 添加测试日志
   void _addLog(String message, LogLevel level) {
     final log = TestLogEntry(
@@ -103,11 +104,11 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       message: message,
       level: level,
     );
-    
+
     setState(() {
       _testLogs.add(log);
     });
-    
+
     // 自动滚动到底部
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_logScrollController.hasClients) {
@@ -119,72 +120,75 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       }
     });
   }
-  
+
   /// 执行识别测试
   Future<void> _runTest() async {
     if (_selectedImage == null) {
       _addLog('请先选择测试图片', LogLevel.warning);
       return;
     }
-    
+
     setState(() {
       _isTesting = true;
       _lastResult = null;
     });
-    
+
     final stopwatch = Stopwatch()..start();
-    
+
     try {
       _addLog('开始植物识别测试...', LogLevel.info);
       _addLog('图片: ${_selectedImage!.path.split('/').last}', LogLevel.info);
       _addLog('模式: ${_quickMode ? '快速识别' : '详细识别'}', LogLevel.info);
-      
+
       // 显示发送的提示词
       if (_customPrompt.isNotEmpty) {
         _addLog('===== 发送的提示词 =====', LogLevel.debug);
         _addLog(_customPrompt, LogLevel.debug);
         _addLog('========================', LogLevel.debug);
       }
-      
+
       // 实时状态监控
       _addLog('正在处理图片...', LogLevel.info);
       _addLog('连接MNN Chat服务...', LogLevel.info);
-      
+
       // 调用识别服务并添加实时状态更新
       final result = await _runTestWithMonitoring();
-      
+
       stopwatch.stop();
       _lastResult = result;
-      
+
       _addLog('识别完成，总耗时: ${stopwatch.elapsedMilliseconds}ms', LogLevel.success);
-      
+
       if (result.success) {
         _addLog('识别成功，找到 ${result.results.length} 个结果', LogLevel.success);
         for (int i = 0; i < result.results.length; i++) {
           final plant = result.results[i];
-          _addLog('结果 ${i + 1}: ${plant.name} (置信度: ${(plant.confidence * 100).toStringAsFixed(1)}%)', LogLevel.info);
+          _addLog(
+            '结果 ${i + 1}: ${plant.name} (置信度: ${(plant.confidence * 100).toStringAsFixed(1)}%)',
+            LogLevel.info,
+          );
         }
-        
+
         // 显示详细的识别结果分析
         _logDetailedResults(result);
       } else {
         _addLog('识别失败: ${result.error}', LogLevel.error);
       }
-      
+
       // 如果是预设图片，显示期望结果对比
       if (_selectedPresetImage != null) {
         _addLog('期望结果: ${_selectedPresetImage!.expectedResult}', LogLevel.info);
         if (result.success && result.results.isNotEmpty) {
           final actualResult = result.results.first.name;
-          final isMatch = actualResult.contains(_selectedPresetImage!.expectedResult) ||
-                         _selectedPresetImage!.expectedResult.contains(actualResult);
+          final isMatch =
+              actualResult.contains(_selectedPresetImage!.expectedResult) ||
+              _selectedPresetImage!.expectedResult.contains(actualResult);
           _addLog(
             '结果匹配: ${isMatch ? '✅ 匹配' : '❌ 不匹配'}',
-            isMatch ? LogLevel.success : LogLevel.warning
+            isMatch ? LogLevel.success : LogLevel.warning,
           );
         }
       }
-      
     } catch (e) {
       stopwatch.stop();
       _addLog('测试异常: $e', LogLevel.error);
@@ -194,16 +198,16 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       });
     }
   }
-  
+
   /// 带监控的测试执行
   Future<RecognitionResponse> _runTestWithMonitoring() async {
     final requestStopwatch = Stopwatch()..start();
-    
+
     // 监控图片预处理
     _addLog('预处理图片...', LogLevel.debug);
     final imageSize = await _selectedImage!.length();
     _addLog('原始图片大小: ${_formatFileSize(imageSize)}', LogLevel.debug);
-    
+
     try {
       // 调用识别服务
       _addLog('发送识别请求...', LogLevel.debug);
@@ -211,22 +215,28 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
         _selectedImage!,
         quickMode: _quickMode,
       );
-      
+
       requestStopwatch.stop();
-      _addLog('API请求耗时: ${requestStopwatch.elapsedMilliseconds}ms', LogLevel.debug);
-      
+      _addLog(
+        'API请求耗时: ${requestStopwatch.elapsedMilliseconds}ms',
+        LogLevel.debug,
+      );
+
       return result;
     } catch (e) {
       requestStopwatch.stop();
-      _addLog('API请求失败，耗时: ${requestStopwatch.elapsedMilliseconds}ms', LogLevel.error);
+      _addLog(
+        'API请求失败，耗时: ${requestStopwatch.elapsedMilliseconds}ms',
+        LogLevel.error,
+      );
       rethrow;
     }
   }
-  
+
   /// 记录详细识别结果
   void _logDetailedResults(RecognitionResponse result) {
     _addLog('===== 详细识别结果 =====', LogLevel.debug);
-    
+
     for (int i = 0; i < result.results.length; i++) {
       final plant = result.results[i];
       _addLog('结果 ${i + 1}:', LogLevel.debug);
@@ -234,32 +244,35 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       if (plant.nickname != null) {
         _addLog('  别名: ${plant.nickname}', LogLevel.debug);
       }
-      _addLog('  置信度: ${(plant.confidence * 100).toStringAsFixed(1)}%', LogLevel.debug);
+      _addLog(
+        '  置信度: ${(plant.confidence * 100).toStringAsFixed(1)}%',
+        LogLevel.debug,
+      );
       _addLog('  安全等级: ${plant.safety.level.name}', LogLevel.debug);
-      
+
       if (plant.features.isNotEmpty) {
         _addLog('  特征: ${plant.features.join(', ')}', LogLevel.debug);
       }
-      
+
       if (plant.tags.isNotEmpty) {
         _addLog('  标签: ${plant.tags.join(', ')}', LogLevel.debug);
       }
-      
+
       if (i < result.results.length - 1) {
         _addLog('  ----', LogLevel.debug);
       }
     }
-    
+
     _addLog('=======================', LogLevel.debug);
   }
-  
+
   /// 格式化文件大小
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '${bytes}B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
   }
-  
+
   /// 选择预设测试图片
   Future<void> _selectPresetImage(TestImageInfo imageInfo) async {
     try {
@@ -279,29 +292,29 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       _addLog('选择预设图片失败: $e', LogLevel.error);
     }
   }
-  
+
   /// 选择自定义图片
   Future<void> _selectCustomImage() async {
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-      
+
       if (image != null) {
         final file = File(image.path);
         final savedFile = await TestImageManager.saveUserTestImage(file);
-        
+
         setState(() {
           _selectedImage = savedFile;
           _selectedPresetImage = null; // 清除预设选择
         });
-        
+
         _addLog('选择自定义图片: ${image.name}', LogLevel.info);
       }
     } catch (e) {
       _addLog('选择自定义图片失败: $e', LogLevel.error);
     }
   }
-  
+
   /// 清空日志
   void _clearLogs() {
     setState(() {
@@ -309,7 +322,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       _lastResult = null;
     });
   }
-  
+
   /// 处理提示词操作
   void _handlePromptAction(String action) {
     switch (action) {
@@ -324,7 +337,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
         break;
     }
   }
-  
+
   /// 重置提示词为默认值
   void _resetPromptToDefault() {
     setState(() {
@@ -332,11 +345,11 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
     });
     _addLog('提示词已重置为默认', LogLevel.info);
   }
-  
+
   /// 显示提示词模板选择器
   void _showPromptTemplates() {
     final templates = _getPromptTemplates();
-    
+
     showDialog(
       context: context,
       builder: (context) {
@@ -374,20 +387,20 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       },
     );
   }
-  
+
   /// 保存自定义提示词模板
   void _savePromptTemplate() {
     if (_customPrompt.isEmpty) {
       _addLog('提示词为空，无法保存', LogLevel.warning);
       return;
     }
-    
+
     showDialog(
       context: context,
       builder: (context) {
         String templateName = '';
         String templateDescription = '';
-        
+
         return AlertDialog(
           title: const Text('保存提示词模板'),
           content: Column(
@@ -430,7 +443,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       },
     );
   }
-  
+
   /// 获取预定义提示词模板
   List<Map<String, dynamic>> _getPromptTemplates() {
     return [
@@ -540,7 +553,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       },
     ];
   }
-  
+
   /// 获取默认提示词
   String _getDefaultPrompt() {
     return '''请分析图片中的植物并提供准确的识别结果。
@@ -594,7 +607,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       ),
     );
   }
-  
+
   /// 连接状态页面
   Widget _buildConnectionTab() {
     return SingleChildScrollView(
@@ -616,11 +629,11 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
                   Row(
                     children: [
                       Icon(
-                        _connectionStatus['connected'] == true 
-                            ? Icons.check_circle 
+                        _connectionStatus['connected'] == true
+                            ? Icons.check_circle
                             : Icons.error,
-                        color: _connectionStatus['connected'] == true 
-                            ? Colors.green 
+                        color: _connectionStatus['connected'] == true
+                            ? Colors.green
                             : Colors.red,
                       ),
                       const SizedBox(width: 8),
@@ -634,18 +647,45 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
                   if (_isConnecting) ...[
                     const Center(child: CircularProgressIndicator()),
                     const SizedBox(height: 16),
-                    const Text('正在连接服务...')
+                    const Text('正在连接服务...'),
                   ] else ...[
-                    _buildStatusItem('服务地址', _connectionStatus['service_url']?.toString() ?? '未知'),
-                    _buildStatusItem('目标模型', _connectionStatus['target_model']?.toString() ?? '未知'),
-                    _buildStatusItem('连接状态', _connectionStatus['status']?.toString() ?? '未知'),
+                    _buildStatusItem(
+                      '服务地址',
+                      _connectionStatus['service_url']?.toString() ?? '未知',
+                    ),
+                    _buildStatusItem(
+                      '目标模型',
+                      _connectionStatus['target_model']?.toString() ?? '未知',
+                    ),
+                    _buildStatusItem(
+                      '连接状态',
+                      _connectionStatus['status']?.toString() ?? '未知',
+                    ),
                     if (_connectionStatus['features'] != null) ...[
                       const Divider(),
-                      Text('功能支持', style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        '功能支持',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 8),
-                      _buildStatusItem('视觉支持', _connectionStatus['features']['vision_support']?.toString() ?? '未知'),
-                      _buildStatusItem('中文优化', _connectionStatus['features']['chinese_optimized']?.toString() ?? '未知'),
-                      _buildStatusItem('上下文长度', _connectionStatus['features']['context_length']?.toString() ?? '未知'),
+                      _buildStatusItem(
+                        '视觉支持',
+                        _connectionStatus['features']['vision_support']
+                                ?.toString() ??
+                            '未知',
+                      ),
+                      _buildStatusItem(
+                        '中文优化',
+                        _connectionStatus['features']['chinese_optimized']
+                                ?.toString() ??
+                            '未知',
+                      ),
+                      _buildStatusItem(
+                        '上下文长度',
+                        _connectionStatus['features']['context_length']
+                                ?.toString() ??
+                            '未知',
+                      ),
                     ],
                   ],
                 ],
@@ -657,16 +697,14 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _isConnecting ? null : _initializeConnection,
-              child: _isConnecting 
-                  ? const Text('连接中...') 
-                  : const Text('重新连接'),
+              child: _isConnecting ? const Text('连接中...') : const Text('重新连接'),
             ),
           ),
         ],
       ),
     );
   }
-  
+
   /// 状态项显示
   Widget _buildStatusItem(String label, String value) {
     return Padding(
@@ -686,7 +724,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       ),
     );
   }
-  
+
   /// 图片测试页面
   Widget _buildImageTestTab() {
     return SingleChildScrollView(
@@ -708,7 +746,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
                 children: [
                   Text('选择测试图片', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 16),
-                  
+
                   // 当前选择的图片
                   if (_selectedImage != null) ...[
                     Container(
@@ -720,10 +758,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          _selectedImage!,
-                          fit: BoxFit.cover,
-                        ),
+                        child: Image.file(_selectedImage!, fit: BoxFit.cover),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -737,7 +772,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
                     ],
                     const SizedBox(height: 16),
                   ],
-                  
+
                   // 图片选择按钮
                   Row(
                     children: [
@@ -762,9 +797,9 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // 测试配置
           Card(
             child: Padding(
@@ -774,7 +809,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
                 children: [
                   Text('测试配置', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 16),
-                  
+
                   SwitchListTile(
                     title: const Text('快速模式'),
                     subtitle: const Text('使用简化的识别流程'),
@@ -785,11 +820,14 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
                       });
                     },
                   ),
-                  
+
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Text('自定义提示词', style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        '自定义提示词',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const Spacer(),
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert),
@@ -841,7 +879,10 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
                       children: [
                         // 编辑模式切换
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade50,
                             borderRadius: const BorderRadius.only(
@@ -877,12 +918,15 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
                           ),
                         ),
                         TextField(
-                          controller: TextEditingController(text: _customPrompt),
+                          controller: TextEditingController(
+                            text: _customPrompt,
+                          ),
                           maxLines: 8,
                           decoration: const InputDecoration(
                             border: InputBorder.none,
                             contentPadding: EdgeInsets.all(12),
-                            hintText: '输入自定义提示词...\n\n提示：\n- 使用中文描述需求\n- 包含输出格式要求\n- 明确安全性要求',
+                            hintText:
+                                '输入自定义提示词...\n\n提示：\n- 使用中文描述需求\n- 包含输出格式要求\n- 明确安全性要求',
                             hintStyle: TextStyle(fontSize: 12),
                           ),
                           onChanged: (value) {
@@ -902,17 +946,20 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // 开始测试按钮
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: (_selectedImage != null && !_isTesting && _connectionStatus['connected'] == true)
+              onPressed:
+                  (_selectedImage != null &&
+                      !_isTesting &&
+                      _connectionStatus['connected'] == true)
                   ? _runTest
                   : null,
-              icon: _isTesting 
+              icon: _isTesting
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -925,7 +972,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
               ),
             ),
           ),
-          
+
           // 测试结果
           if (_lastResult != null) ...[
             const SizedBox(height: 16),
@@ -935,7 +982,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       ),
     );
   }
-  
+
   /// 显示预设图片选择对话框
   void _showPresetImageDialog() {
     showDialog(
@@ -974,7 +1021,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       },
     );
   }
-  
+
   /// 获取难度颜色
   Color _getDifficultyColor(TestDifficulty difficulty) {
     switch (difficulty) {
@@ -986,7 +1033,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
         return Colors.red;
     }
   }
-  
+
   /// 构建测试结果显示
   Widget _buildTestResult() {
     return Card(
@@ -997,7 +1044,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
           children: [
             Text('测试结果', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
-            
+
             if (_lastResult!.success) ...[
               for (int i = 0; i < _lastResult!.results.length; i++) ...[
                 _buildPlantResult(_lastResult!.results[i], i + 1),
@@ -1008,9 +1055,9 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1019,10 +1066,13 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
                       children: [
                         const Icon(Icons.error, color: Colors.red),
                         const SizedBox(width: 8),
-                        const Text('识别失败', style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red,
-                        )),
+                        const Text(
+                          '识别失败',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -1036,7 +1086,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       ),
     );
   }
-  
+
   /// 构建植物识别结果
   Widget _buildPlantResult(RecognitionResult result, int index) {
     return Column(
@@ -1044,15 +1094,13 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       children: [
         Text(
           '结果 $index: ${result.name}',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text('置信度: ${(result.confidence * 100).toStringAsFixed(1)}%'),
-        if (result.nickname != null) ...[
-          Text('别名: ${result.nickname}'),
-        ],
+        if (result.nickname != null) ...[Text('别名: ${result.nickname}')],
         if (result.description.isNotEmpty) ...[
           const SizedBox(height: 4),
           Text('描述: ${result.description}'),
@@ -1066,10 +1114,10 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: _getSafetyColor(result.safety.level).withOpacity(0.1),
+            color: _getSafetyColor(result.safety.level).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
-              color: _getSafetyColor(result.safety.level).withOpacity(0.3),
+              color: _getSafetyColor(result.safety.level).withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -1099,7 +1147,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
             children: result.tags.map((tag) {
               return Chip(
                 label: Text(tag),
-                backgroundColor: Colors.blue.withOpacity(0.1),
+                backgroundColor: Colors.blue.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(fontSize: 10),
               );
             }).toList(),
@@ -1108,7 +1156,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       ],
     );
   }
-  
+
   /// 获取安全等级颜色
   Color _getSafetyColor(SafetyLevel level) {
     switch (level) {
@@ -1123,7 +1171,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
         return Colors.grey;
     }
   }
-  
+
   /// 获取安全等级图标
   IconData _getSafetyIcon(SafetyLevel level) {
     switch (level) {
@@ -1138,7 +1186,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
         return Icons.help;
     }
   }
-  
+
   /// 测试日志页面
   Widget _buildLogsTab() {
     return Column(
@@ -1162,13 +1210,11 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
           ),
         ),
         const Divider(height: 1),
-        
+
         // 日志列表
         Expanded(
           child: _testLogs.isEmpty
-              ? const Center(
-                  child: Text('暂无测试日志'),
-                )
+              ? const Center(child: Text('暂无测试日志'))
               : ListView.builder(
                   controller: _logScrollController,
                   itemCount: _testLogs.length,
@@ -1181,18 +1227,15 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
       ],
     );
   }
-  
+
   /// 构建日志项
   Widget _buildLogItem(TestLogEntry log) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: _getLogColor(log.level).withOpacity(0.05),
+        color: _getLogColor(log.level).withValues(alpha: 0.05),
         border: Border(
-          left: BorderSide(
-            color: _getLogColor(log.level),
-            width: 3,
-          ),
+          left: BorderSide(color: _getLogColor(log.level), width: 3),
         ),
       ),
       child: Column(
@@ -1208,16 +1251,13 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
               const SizedBox(width: 8),
               Text(
                 _formatTime(log.timestamp),
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: _getLogColor(log.level).withOpacity(0.2),
+                  color: _getLogColor(log.level).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -1232,15 +1272,12 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            log.message,
-            style: const TextStyle(fontSize: 14),
-          ),
+          Text(log.message, style: const TextStyle(fontSize: 14)),
         ],
       ),
     );
   }
-  
+
   /// 获取日志等级颜色
   Color _getLogColor(LogLevel level) {
     switch (level) {
@@ -1256,7 +1293,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
         return Colors.red;
     }
   }
-  
+
   /// 获取日志等级图标
   IconData _getLogIcon(LogLevel level) {
     switch (level) {
@@ -1272,12 +1309,12 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
         return Icons.error;
     }
   }
-  
+
   /// 格式化时间
   String _formatTime(DateTime time) {
     return '${time.hour.toString().padLeft(2, '0')}:'
-           '${time.minute.toString().padLeft(2, '0')}:'
-           '${time.second.toString().padLeft(2, '0')}';
+        '${time.minute.toString().padLeft(2, '0')}:'
+        '${time.second.toString().padLeft(2, '0')}';
   }
 }
 
@@ -1295,10 +1332,4 @@ class TestLogEntry {
 }
 
 /// 日志等级
-enum LogLevel {
-  debug,
-  info,
-  success,
-  warning,
-  error,
-}
+enum LogLevel { debug, info, success, warning, error }

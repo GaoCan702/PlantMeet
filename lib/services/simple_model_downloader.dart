@@ -8,16 +8,20 @@ import 'package:plantmeet/services/model_storage_manager.dart';
 
 /// 简化的模型下载器 - 参考 flutter_gemma 的最佳实践
 class SimpleModelDownloader {
-  static const String _modelUrl = 'https://huggingface.co/google/gemma-3n-E4B-it-litert-preview/resolve/main/gemma-3n-E4B-it-int4.task';
+  static const String _modelUrl =
+      'https://huggingface.co/google/gemma-3n-E4B-it-litert-preview/resolve/main/gemma-3n-E4B-it-int4.task';
   static const String _fileName = 'gemma-3n-E4B-it-int4.task';
   // 通过 --dart-define=HF_ACCESS_TOKEN=... 注入（无 Token 时将匿名访问）
-  static const String _envAccessToken = String.fromEnvironment('HF_ACCESS_TOKEN', defaultValue: '');
+  static const String _envAccessToken = String.fromEnvironment(
+    'HF_ACCESS_TOKEN',
+    defaultValue: '',
+  );
   // SharedPreferences key
   static const String _prefsModelKey = 'installed_model_file_name';
-  
+
   final ModelStorageManager _storageManager;
   final Logger _logger = Logger();
-  
+
   // 并发控制
   Completer<bool>? _downloadCompleter;
 
@@ -39,7 +43,7 @@ class SimpleModelDownloader {
       // 检查 SharedPreferences 中的记录
       final prefs = await SharedPreferences.getInstance();
       final savedFileName = prefs.getString(_prefsModelKey);
-      
+
       if (savedFileName != _fileName) {
         return false;
       }
@@ -67,7 +71,7 @@ class SimpleModelDownloader {
         await file.delete();
         _logger.i('已删除损坏的模型文件');
       }
-      
+
       // 清除 SharedPreferences 记录
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_prefsModelKey);
@@ -87,7 +91,7 @@ class SimpleModelDownloader {
       }
 
       final response = await http.head(Uri.parse(_modelUrl), headers: headers);
-      
+
       if (response.statusCode == 200) {
         final contentLength = response.headers['content-length'];
         return contentLength != null ? int.parse(contentLength) : null;
@@ -121,10 +125,10 @@ class SimpleModelDownloader {
 
     try {
       onStatusUpdate('准备下载模型...');
-      
+
       final filePath = await getModelFilePath(modelId);
       final file = File(filePath);
-      
+
       // 确保目录存在
       await file.parent.create(recursive: true);
 
@@ -133,15 +137,15 @@ class SimpleModelDownloader {
       if (file.existsSync()) {
         downloadedBytes = await file.length();
         if (downloadedBytes > 0) {
-          onStatusUpdate('检测到部分下载，从 ${(downloadedBytes / 1024 / 1024).toStringAsFixed(1)} MB 处继续...');
+          onStatusUpdate(
+            '检测到部分下载，从 ${(downloadedBytes / 1024 / 1024).toStringAsFixed(1)} MB 处继续...',
+          );
         }
       }
 
       // 创建 HTTP 请求
       final request = http.Request('GET', Uri.parse(_modelUrl));
-      request.headers.addAll({
-        'User-Agent': 'PlantMeet/1.0 Flutter App',
-      });
+      request.headers.addAll({'User-Agent': 'PlantMeet/1.0 Flutter App'});
       if (_envAccessToken.isNotEmpty) {
         request.headers['Authorization'] = 'Bearer $_envAccessToken';
       }
@@ -157,9 +161,13 @@ class SimpleModelDownloader {
       if (response.statusCode == 200 || response.statusCode == 206) {
         final contentLength = response.contentLength ?? 0;
         final totalBytes = downloadedBytes + contentLength;
-        
-        _logger.i('开始下载: 总大小 ${(totalBytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB');
-        onStatusUpdate('开始下载 ${(totalBytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB 文件...');
+
+        _logger.i(
+          '开始下载: 总大小 ${(totalBytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB',
+        );
+        onStatusUpdate(
+          '开始下载 ${(totalBytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB 文件...',
+        );
 
         fileSink = file.openWrite(mode: FileMode.append);
         int received = downloadedBytes;
@@ -175,9 +183,11 @@ class SimpleModelDownloader {
             final progress = totalBytes > 0 ? received / totalBytes : 0.0;
             final downloadedMB = received / 1024 / 1024;
             final totalMB = totalBytes / 1024 / 1024;
-            
+
             onProgress(progress);
-            onStatusUpdate('下载中: ${downloadedMB.toStringAsFixed(1)}MB / ${totalMB.toStringAsFixed(1)}MB (${(progress * 100).toStringAsFixed(1)}%)');
+            onStatusUpdate(
+              '下载中: ${downloadedMB.toStringAsFixed(1)}MB / ${totalMB.toStringAsFixed(1)}MB (${(progress * 100).toStringAsFixed(1)}%)',
+            );
             lastProgressUpdate = now;
           }
         }
@@ -191,28 +201,28 @@ class SimpleModelDownloader {
           // 保存到 SharedPreferences
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString(_prefsModelKey, _fileName);
-          
-          _logger.i('✅ 模型下载完成: ${(finalSize / 1024 / 1024 / 1024).toStringAsFixed(2)} GB');
+
+          _logger.i(
+            '✅ 模型下载完成: ${(finalSize / 1024 / 1024 / 1024).toStringAsFixed(2)} GB',
+          );
           onStatusUpdate('下载完成！模型已准备就绪');
           onProgress(1.0);
-          
+
           // 完成下载
           _downloadCompleter?.complete(true);
         } else {
           throw Exception('文件下载不完整: 期望 $totalBytes 字节，实际 $finalSize 字节');
         }
-
       } else {
         throw Exception('下载失败: HTTP ${response.statusCode}');
       }
-
     } catch (e) {
       _logger.e('下载模型时出错: $e');
       onStatusUpdate('下载失败: $e');
-      
+
       // 错误时完成 completer
       _downloadCompleter?.completeError(e);
-      
+
       rethrow;
     } finally {
       if (fileSink != null) {
@@ -222,7 +232,7 @@ class SimpleModelDownloader {
           _logger.w('关闭文件流时出错: $e');
         }
       }
-      
+
       // 无论成功还是失败，都清理 completer
       _downloadCompleter = null;
     }
@@ -233,7 +243,7 @@ class SimpleModelDownloader {
     try {
       // 重置下载控制器
       _downloadCompleter = null;
-      
+
       final filePath = await getModelFilePath(modelId);
       final file = File(filePath);
 
@@ -241,11 +251,10 @@ class SimpleModelDownloader {
         await file.delete();
         _logger.i('✅ 模型文件已删除');
       }
-      
+
       // 清除 SharedPreferences 记录
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_prefsModelKey);
-      
     } catch (e) {
       _logger.e('删除模型文件时出错: $e');
       rethrow;
@@ -257,7 +266,7 @@ class SimpleModelDownloader {
     try {
       final filePath = await getModelFilePath(modelId);
       final file = File(filePath);
-      
+
       if (file.existsSync()) {
         return await file.length();
       }
@@ -279,7 +288,9 @@ class SimpleModelDownloader {
       'local_size_bytes': fileSize,
       'remote_size_bytes': remoteSize,
       'local_size_gb': fileSize != null ? fileSize / 1024 / 1024 / 1024 : null,
-      'remote_size_gb': remoteSize != null ? remoteSize / 1024 / 1024 / 1024 : null,
+      'remote_size_gb': remoteSize != null
+          ? remoteSize / 1024 / 1024 / 1024
+          : null,
       'file_path': await getModelFilePath(modelId),
       'model_url': _modelUrl,
     };

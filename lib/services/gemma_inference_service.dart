@@ -52,15 +52,15 @@ class FlutterGemmaPlugin {
 class GemmaInferenceService {
   static const String _modelId = 'google/gemma-3n-E4B-it-litert-preview';
   static const String _modelFileName = 'gemma-3n-E4B-it-int4.task';
-  
+
   final ModelStorageManager _storageManager;
   final DeviceCapabilityDetector _capabilityDetector;
   final Logger _logger = Logger();
-  
+
   FlutterGemmaPlugin? _gemmaPlugin;
   bool _isModelLoaded = false;
   bool _isInitializing = false;
-  
+
   GemmaInferenceService(this._storageManager, this._capabilityDetector);
 
   Future<bool> isModelReady() async {
@@ -73,27 +73,29 @@ class GemmaInferenceService {
     }
 
     _isInitializing = true;
-    
+
     try {
       _logger.i('Initializing Gemma model...');
-      
+
       // Check if model files exist directly instead of relying on status
       final modelPath = await _storageManager.getModelPath(_modelId);
       final modelFile = File('$modelPath/$_modelFileName');
-      
+
       if (!await modelFile.exists()) {
-        throw Exception('Model file not found at: ${modelFile.path}. Please download the model first.');
+        throw Exception(
+          'Model file not found at: ${modelFile.path}. Please download the model first.',
+        );
       }
 
       // Get device capability for optimal configuration
       final capability = await _capabilityDetector.detect();
-      
+
       // Initialize Gemma plugin
       _gemmaPlugin = FlutterGemmaPlugin();
-      
+
       // Configure based on device capability
       final config = _createModelConfig(capability, modelFile.path);
-      
+
       await _gemmaPlugin!.init(
         modelPath: modelFile.path,
         maxTokens: config.maxTokens,
@@ -104,10 +106,9 @@ class GemmaInferenceService {
 
       // Warm up the model with a simple inference
       await _warmupModel();
-      
+
       _isModelLoaded = true;
       _logger.i('Gemma model initialized successfully');
-      
     } catch (e) {
       _logger.e('Failed to initialize Gemma model: $e');
       _isModelLoaded = false;
@@ -127,13 +128,13 @@ class GemmaInferenceService {
 
     try {
       _logger.i('Starting plant recognition...');
-      
+
       // Preprocess image
       final processedImage = await _preprocessImage(imageFile);
-      
+
       // Create prompt for plant identification
       final prompt = _createPlantIdentificationPrompt();
-      
+
       // Perform inference
       final startTime = DateTime.now();
       final response = await _gemmaPlugin!.generateResponseWithImage(
@@ -141,14 +142,13 @@ class GemmaInferenceService {
         image: processedImage,
       );
       final inferenceTime = DateTime.now().difference(startTime);
-      
+
       _logger.i('Inference completed in ${inferenceTime.inMilliseconds}ms');
-      
+
       // Parse response to recognition results
       final results = _parseRecognitionResponse(response, inferenceTime);
-      
+
       return results;
-      
     } catch (e) {
       _logger.e('Plant recognition failed: $e');
       rethrow;
@@ -160,7 +160,7 @@ class GemmaInferenceService {
       // Read image
       final imageBytes = await imageFile.readAsBytes();
       final originalImage = img.decodeImage(imageBytes);
-      
+
       if (originalImage == null) {
         throw Exception('Failed to decode image');
       }
@@ -176,9 +176,8 @@ class GemmaInferenceService {
 
       // Convert to format expected by model
       final processedBytes = img.encodeJpg(resizedImage, quality: 90);
-      
+
       return Uint8List.fromList(processedBytes);
-      
     } catch (e) {
       _logger.e('Image preprocessing failed: $e');
       rethrow;
@@ -222,7 +221,7 @@ class GemmaInferenceService {
   ) {
     try {
       final results = <RecognitionResult>[];
-      
+
       // Parse the structured response
       final lines = response.split('\n');
       String? currentChineseName;
@@ -230,28 +229,34 @@ class GemmaInferenceService {
       int? currentConfidence;
       String? currentDescription;
       String? toxicityInfo;
-      
+
       for (final line in lines) {
         final trimmedLine = line.trim();
-        
+
         if (trimmedLine.startsWith('中文名：')) {
           // Save previous result if complete
-          if (currentChineseName != null && currentScientificName != null && currentConfidence != null) {
-            results.add(_createRecognitionResult(
-              currentChineseName,
-              currentScientificName,
-              currentConfidence,
-              currentDescription ?? '',
-              toxicityInfo,
-              inferenceTime,
-            ));
+          if (currentChineseName != null &&
+              currentScientificName != null &&
+              currentConfidence != null) {
+            results.add(
+              _createRecognitionResult(
+                currentChineseName,
+                currentScientificName,
+                currentConfidence,
+                currentDescription ?? '',
+                toxicityInfo,
+                inferenceTime,
+              ),
+            );
           }
-          
+
           currentChineseName = trimmedLine.substring(4);
         } else if (trimmedLine.startsWith('学名：')) {
           currentScientificName = trimmedLine.substring(3);
         } else if (trimmedLine.startsWith('置信度：')) {
-          final confidenceStr = trimmedLine.substring(4).replaceAll(RegExp(r'[^0-9]'), '');
+          final confidenceStr = trimmedLine
+              .substring(4)
+              .replaceAll(RegExp(r'[^0-9]'), '');
           currentConfidence = int.tryParse(confidenceStr);
         } else if (trimmedLine.startsWith('特征：')) {
           currentDescription = trimmedLine.substring(3);
@@ -259,29 +264,32 @@ class GemmaInferenceService {
           toxicityInfo = trimmedLine.substring(5);
         }
       }
-      
+
       // Save last result
-      if (currentChineseName != null && currentScientificName != null && currentConfidence != null) {
-        results.add(_createRecognitionResult(
-          currentChineseName,
-          currentScientificName,
-          currentConfidence,
-          currentDescription ?? '',
-          toxicityInfo,
-          inferenceTime,
-        ));
+      if (currentChineseName != null &&
+          currentScientificName != null &&
+          currentConfidence != null) {
+        results.add(
+          _createRecognitionResult(
+            currentChineseName,
+            currentScientificName,
+            currentConfidence,
+            currentDescription ?? '',
+            toxicityInfo,
+            inferenceTime,
+          ),
+        );
       }
-      
+
       // If parsing failed, create fallback results
       if (results.isEmpty) {
         results.addAll(_createFallbackResults(response, inferenceTime));
       }
-      
+
       // Sort by confidence
       results.sort((a, b) => b.confidence.compareTo(a.confidence));
-      
+
       return results.take(3).toList();
-      
     } catch (e) {
       _logger.e('Failed to parse recognition response: $e');
       return _createFallbackResults(response, inferenceTime);
@@ -297,7 +305,7 @@ class GemmaInferenceService {
     Duration inferenceTime,
   ) {
     final toxicityLevel = _parseToxicityInfo(toxicityInfo);
-    
+
     return RecognitionResult(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: chineseName,
@@ -307,9 +315,7 @@ class GemmaInferenceService {
       features: [description], // Use description as feature
       safety: SafetyInfo(
         level: toxicityLevel ? SafetyLevel.toxic : SafetyLevel.safe,
-        description: toxicityLevel 
-            ? '该植物可能有毒，请小心接触' 
-            : '该植物相对安全',
+        description: toxicityLevel ? '该植物可能有毒，请小心接触' : '该植物相对安全',
         warnings: toxicityInfo != null ? [toxicityInfo] : [],
       ),
       locations: ['室内', '户外'], // Default locations
@@ -319,18 +325,22 @@ class GemmaInferenceService {
 
   bool _parseToxicityInfo(String? toxicityInfo) {
     if (toxicityInfo == null) return false;
-    
+
     final lowerInfo = toxicityInfo.toLowerCase();
-    if (lowerInfo.contains('有毒') || (lowerInfo.contains('毒性') && !lowerInfo.contains('无'))) {
+    if (lowerInfo.contains('有毒') ||
+        (lowerInfo.contains('毒性') && !lowerInfo.contains('无'))) {
       return true;
     } else if (lowerInfo.contains('无毒') || lowerInfo.contains('无明显毒性')) {
       return false;
     }
-    
+
     return false; // Default to safe
   }
 
-  List<RecognitionResult> _createFallbackResults(String response, Duration inferenceTime) {
+  List<RecognitionResult> _createFallbackResults(
+    String response,
+    Duration inferenceTime,
+  ) {
     return [
       RecognitionResult(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -350,7 +360,10 @@ class GemmaInferenceService {
     ];
   }
 
-  _ModelConfig _createModelConfig(DeviceCapability capability, String modelPath) {
+  _ModelConfig _createModelConfig(
+    DeviceCapability capability,
+    String modelPath,
+  ) {
     return _ModelConfig(
       maxTokens: capability.isHighEnd ? 2048 : 1024,
       temperature: 0.1, // Low temperature for more deterministic results
@@ -362,15 +375,15 @@ class GemmaInferenceService {
   Future<void> _warmupModel() async {
     try {
       _logger.i('Warming up model...');
-      
+
       // Create a small dummy image for warmup
       final dummyImage = _createDummyImage();
-      
+
       await _gemmaPlugin!.generateResponseWithImage(
         prompt: '这是什么？',
         image: dummyImage,
       );
-      
+
       _logger.i('Model warmup completed');
     } catch (e) {
       _logger.w('Model warmup failed (non-critical): $e');

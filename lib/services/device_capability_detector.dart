@@ -13,10 +13,14 @@ class DeviceCapabilityDetector {
     final ramSize = await _getAvailableRAM(deviceInfo);
     final storageSpace = await _getAvailableStorage();
     final cpuInfo = await _getCPUInfo(deviceInfo);
-    
+
     final isHighEnd = ramSize >= _recommendedRamBytes;
     final recommendedBackend = _determineRecommendedBackend(ramSize, cpuInfo);
-    final estimatedTime = _estimateInferenceTime(ramSize, cpuInfo, recommendedBackend);
+    final estimatedTime = _estimateInferenceTime(
+      ramSize,
+      cpuInfo,
+      recommendedBackend,
+    );
 
     return DeviceCapability(
       ramSizeBytes: ramSize,
@@ -26,7 +30,10 @@ class DeviceCapabilityDetector {
       estimatedInferenceTime: estimatedTime,
       additionalInfo: {
         'cpu_info': cpuInfo,
-        'meets_minimum_requirements': _meetsMinimumRequirements(ramSize, storageSpace),
+        'meets_minimum_requirements': _meetsMinimumRequirements(
+          ramSize,
+          storageSpace,
+        ),
         'platform': Platform.operatingSystem,
       },
     );
@@ -39,15 +46,17 @@ class DeviceCapabilityDetector {
         // Android doesn't directly expose RAM size, estimate based on device characteristics
         final sdkInt = androidInfo.version.sdkInt;
         final brand = androidInfo.brand.toLowerCase();
-        
+
         // Rough estimation based on Android SDK level and brand
-        if (sdkInt >= 30) { // Android 11+
+        if (sdkInt >= 30) {
+          // Android 11+
           if (_isHighEndBrand(brand)) {
             return 8 * 1024 * 1024 * 1024; // 8GB
           } else {
             return 6 * 1024 * 1024 * 1024; // 6GB
           }
-        } else if (sdkInt >= 28) { // Android 9+
+        } else if (sdkInt >= 28) {
+          // Android 9+
           return 4 * 1024 * 1024 * 1024; // 4GB
         } else {
           return 3 * 1024 * 1024 * 1024; // 3GB
@@ -55,7 +64,7 @@ class DeviceCapabilityDetector {
       } else if (Platform.isIOS) {
         final iosInfo = await deviceInfo.iosInfo;
         final model = iosInfo.model.toLowerCase();
-        
+
         // iOS RAM estimation based on device model
         if (model.contains('iphone')) {
           if (model.contains('15') || model.contains('14')) {
@@ -73,7 +82,7 @@ class DeviceCapabilityDetector {
       // Fallback estimation
       return 4 * 1024 * 1024 * 1024; // 4GB default
     }
-    
+
     return 4 * 1024 * 1024 * 1024; // 4GB default
   }
 
@@ -81,7 +90,7 @@ class DeviceCapabilityDetector {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final stat = await directory.stat();
-      
+
       // This is a rough estimation - actual implementation would need platform-specific code
       // For now, assume we have at least 10GB available if the directory exists
       return 10 * 1024 * 1024 * 1024; // 10GB
@@ -112,14 +121,14 @@ class DeviceCapabilityDetector {
     } catch (e) {
       // Fallback
     }
-    
-    return {
-      'architecture': 'unknown',
-      'platform': Platform.operatingSystem,
-    };
+
+    return {'architecture': 'unknown', 'platform': Platform.operatingSystem};
   }
 
-  InferenceBackend _determineRecommendedBackend(int ramSize, Map<String, dynamic> cpuInfo) {
+  InferenceBackend _determineRecommendedBackend(
+    int ramSize,
+    Map<String, dynamic> cpuInfo,
+  ) {
     // For mobile devices, start with CPU backend for stability
     // GPU backend can be enabled later based on performance testing
     if (ramSize >= _recommendedRamBytes) {
@@ -131,15 +140,22 @@ class DeviceCapabilityDetector {
     }
   }
 
-  Duration _estimateInferenceTime(int ramSize, Map<String, dynamic> cpuInfo, InferenceBackend backend) {
+  Duration _estimateInferenceTime(
+    int ramSize,
+    Map<String, dynamic> cpuInfo,
+    InferenceBackend backend,
+  ) {
     // Rough estimation based on device capabilities
     int baseTimeSeconds = 15; // Base time for 4B model inference
-    
-    if (ramSize >= 8 * 1024 * 1024 * 1024) { // 8GB+
+
+    if (ramSize >= 8 * 1024 * 1024 * 1024) {
+      // 8GB+
       baseTimeSeconds = 8;
-    } else if (ramSize >= 6 * 1024 * 1024 * 1024) { // 6GB+
+    } else if (ramSize >= 6 * 1024 * 1024 * 1024) {
+      // 6GB+
       baseTimeSeconds = 12;
-    } else if (ramSize >= 4 * 1024 * 1024 * 1024) { // 4GB+
+    } else if (ramSize >= 4 * 1024 * 1024 * 1024) {
+      // 4GB+
       baseTimeSeconds = 15;
     } else {
       baseTimeSeconds = 25; // Low-end devices
@@ -147,7 +163,8 @@ class DeviceCapabilityDetector {
 
     // Adjust for backend
     if (backend == InferenceBackend.gpu) {
-      baseTimeSeconds = (baseTimeSeconds * 0.7).round(); // GPU is typically faster
+      baseTimeSeconds = (baseTimeSeconds * 0.7)
+          .round(); // GPU is typically faster
     }
 
     return Duration(seconds: baseTimeSeconds);
@@ -158,34 +175,48 @@ class DeviceCapabilityDetector {
   }
 
   bool _isHighEndBrand(String brand) {
-    const highEndBrands = ['samsung', 'google', 'oneplus', 'xiaomi', 'oppo', 'vivo'];
+    const highEndBrands = [
+      'samsung',
+      'google',
+      'oneplus',
+      'xiaomi',
+      'oppo',
+      'vivo',
+    ];
     return highEndBrands.any((b) => brand.contains(b));
   }
 
   Future<bool> isModelSupported(ModelInfo modelInfo) async {
     final capability = await detect();
-    
+
     // Check minimum requirements
-    if (!_meetsMinimumRequirements(capability.ramSizeBytes, capability.availableStorageBytes)) {
+    if (!_meetsMinimumRequirements(
+      capability.ramSizeBytes,
+      capability.availableStorageBytes,
+    )) {
       return false;
     }
-    
+
     // Check if we have enough storage for the model
-    if (capability.availableStorageBytes < modelInfo.sizeBytes * 2) { // 2x for safety
+    if (capability.availableStorageBytes < modelInfo.sizeBytes * 2) {
+      // 2x for safety
       return false;
     }
-    
+
     return true;
   }
 
   Future<String> getCompatibilityReport(ModelInfo modelInfo) async {
     final capability = await detect();
     final supported = await isModelSupported(modelInfo);
-    
-    final ramGB = (capability.ramSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(1);
-    final storageGB = (capability.availableStorageBytes / (1024 * 1024 * 1024)).toStringAsFixed(1);
-    final modelSizeGB = (modelInfo.sizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(1);
-    
+
+    final ramGB = (capability.ramSizeBytes / (1024 * 1024 * 1024))
+        .toStringAsFixed(1);
+    final storageGB = (capability.availableStorageBytes / (1024 * 1024 * 1024))
+        .toStringAsFixed(1);
+    final modelSizeGB = (modelInfo.sizeBytes / (1024 * 1024 * 1024))
+        .toStringAsFixed(1);
+
     if (supported) {
       return '''设备兼容性: ✅ 支持
 内存: ${ramGB}GB (推荐: 4GB+)

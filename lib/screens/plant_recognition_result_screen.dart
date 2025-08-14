@@ -14,10 +14,12 @@ class PlantRecognitionResultScreen extends StatefulWidget {
   });
 
   @override
-  State<PlantRecognitionResultScreen> createState() => _PlantRecognitionResultScreenState();
+  State<PlantRecognitionResultScreen> createState() =>
+      _PlantRecognitionResultScreenState();
 }
 
-class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScreen> {
+class _PlantRecognitionResultScreenState
+    extends State<PlantRecognitionResultScreen> {
   bool _showAdvancedInfo = false;
 
   @override
@@ -40,29 +42,30 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
           children: [
             // 原始照片展示
             if (widget.photoPath != null) _buildPhotoSection(),
-            
+
             // 识别结果摘要
             _buildSummarySection(),
-            
+
             // 主要识别结果
             RecognitionResultsList(
               response: widget.response,
               onResultTap: _showPlantDetails,
               onResultSave: _saveToMyGarden,
             ),
-            
+
             // 高级信息切换
             if (widget.response.success && widget.response.results.isNotEmpty)
               _buildAdvancedInfoToggle(),
-            
+
             // 操作建议
             if (widget.response.success) _buildActionSuggestions(),
-            
+
             const SizedBox(height: 24),
           ],
         ),
       ),
-      bottomNavigationBar: widget.response.success && widget.response.bestMatch != null
+      bottomNavigationBar:
+          widget.response.success && widget.response.bestMatch != null
           ? _buildBottomActions()
           : null,
     );
@@ -77,7 +80,7 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -99,15 +102,15 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
 
   Widget _buildSummarySection() {
     final theme = Theme.of(context);
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            theme.colorScheme.primaryContainer.withOpacity(0.3),
-            theme.colorScheme.surfaceVariant.withOpacity(0.1),
+            theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+            theme.colorScheme.surfaceVariant.withValues(alpha: 0.1),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -136,9 +139,7 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
           const SizedBox(height: 8),
           Text(
             widget.response.summary,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              height: 1.4,
-            ),
+            style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
           ),
           const SizedBox(height: 12),
           _buildQuickStats(),
@@ -150,9 +151,9 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
   Widget _buildQuickStats() {
     final theme = Theme.of(context);
     final bestMatch = widget.response.bestMatch;
-    
+
     if (bestMatch == null) return const SizedBox.shrink();
-    
+
     return Row(
       children: [
         _buildStatItem(
@@ -183,7 +184,13 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
     );
   }
 
-  Widget _buildStatItem(ThemeData theme, IconData icon, String label, String value, Color color) {
+  Widget _buildStatItem(
+    ThemeData theme,
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 18),
@@ -227,12 +234,12 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
 
   Widget _buildAdvancedInfo(RecognitionResult result) {
     final theme = Theme.of(context);
-    
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+        color: theme.colorScheme.surfaceVariant.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -242,7 +249,10 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
             _buildAdvancedInfoItem('学名', result.scientificName!),
           if (result.family != null)
             _buildAdvancedInfoItem('科属', result.family!),
-          _buildAdvancedInfoItem('置信度', '${(result.confidence * 100).toStringAsFixed(1)}%'),
+          _buildAdvancedInfoItem(
+            '置信度',
+            '${(result.confidence * 100).toStringAsFixed(1)}%',
+          ),
         ],
       ),
     );
@@ -250,7 +260,7 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
 
   Widget _buildAdvancedInfoItem(String label, String value) {
     final theme = Theme.of(context);
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -265,12 +275,7 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
               ),
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
+          Expanded(child: Text(value, style: theme.textTheme.bodySmall)),
         ],
       ),
     );
@@ -278,7 +283,7 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
 
   Widget _buildActionSuggestions() {
     final theme = Theme.of(context);
-    
+
     return Container(
       margin: const EdgeInsets.all(16),
       child: Column(
@@ -345,12 +350,17 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
 
   Widget _buildBottomActions() {
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        16 + MediaQuery.of(context).padding.bottom,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -418,9 +428,9 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
   // 事件处理
   void _showPlantDetails(RecognitionResult result) {
     // TODO: 导航到植物详情页面
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('查看 ${result.name} 的详细信息')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('查看 ${result.name} 的详细信息')));
   }
 
   void _saveToMyGarden(RecognitionResult result) {
@@ -441,11 +451,11 @@ class _PlantRecognitionResultScreenState extends State<PlantRecognitionResultScr
   void _shareResult() {
     final bestMatch = widget.response.bestMatch;
     if (bestMatch == null) return;
-    
+
     // TODO: 实现分享功能
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('分享 ${bestMatch.name} 的识别结果')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('分享 ${bestMatch.name} 的识别结果')));
   }
 
   void _retakePhoto() {

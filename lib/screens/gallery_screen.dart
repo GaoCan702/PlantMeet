@@ -40,7 +40,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
           }
 
           return Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 + MediaQuery.of(context).padding.bottom,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -84,7 +89,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                 child: _StatisticItem(
                                   icon: Icons.warning,
                                   label: '有毒植物',
-                                  value: '${species.where((s) => s.isToxic == true).length}',
+                                  value:
+                                      '${species.where((s) => s.isToxic == true).length}',
                                   color: Colors.orange,
                                 ),
                               ),
@@ -92,7 +98,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                 child: _StatisticItem(
                                   icon: Icons.trending_up,
                                   label: '平均遇见',
-                                  value: '${(encounters.length / species.length).toStringAsFixed(1)}',
+                                  value:
+                                      '${(encounters.length / species.length).toStringAsFixed(1)}',
                                   color: Colors.purple,
                                 ),
                               ),
@@ -107,41 +114,39 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 const SizedBox(height: 24),
 
                 // 导出选项
-                Text(
-                  'PDF导出',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('PDF导出', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 16),
 
                 if (species.isEmpty)
                   Card(
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 48,
+                        horizontal: 24,
+                      ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.eco,
-                            size: 64,
-                            color: Colors.grey[400],
-                          ),
+                          Icon(Icons.eco, size: 64, color: Colors.grey[400]),
                           const SizedBox(height: 24),
                           Text(
                             '还没有识别任何植物',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[700],
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[700],
+                                ),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 12),
                           Text(
                             '去识别一些植物后再来导出图鉴吧！',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
-                              height: 1.4,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Colors.grey[600],
+                                  height: 1.4,
+                                ),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -177,10 +182,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.blue.shade600,
-                      ),
+                      Icon(Icons.info_outline, color: Colors.blue.shade600),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -213,8 +215,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
     });
 
     try {
-      final file = await _pdfService.exportPlantEncyclopedia(species, encountersMap);
-      
+      final file = await _pdfService.exportPlantEncyclopedia(
+        species,
+        encountersMap,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -230,11 +235,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ErrorSnackBar.show(
-          context,
-          message: '导出失败: $e',
-          title: '导出错误',
-        );
+        ErrorSnackBar.show(context, message: '导出失败: $e', title: '导出错误');
       }
     } finally {
       if (mounted) {
@@ -257,7 +258,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
     try {
       final file = await _pdfService.exportQuickSummary(species, encountersMap);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -273,11 +274,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ErrorSnackBar.show(
-          context,
-          message: '导出失败: $e',
-          title: '导出错误',
-        );
+        ErrorSnackBar.show(context, message: '导出失败: $e', title: '导出错误');
       }
     } finally {
       if (mounted) {
@@ -306,11 +303,7 @@ class _StatisticItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(
-          icon,
-          size: 32,
-          color: color,
-        ),
+        Icon(icon, size: 32, color: color),
         const SizedBox(height: 8),
         Text(
           value,
@@ -319,10 +312,7 @@ class _StatisticItem extends StatelessWidget {
             color: color,
           ),
         ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
   }
@@ -359,11 +349,7 @@ class _ExportOptionCard extends StatelessWidget {
                   color: Colors.red.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  icon,
-                  color: Colors.red.shade600,
-                  size: 24,
-                ),
+                child: Icon(icon, color: Colors.red.shade600, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -379,9 +365,9 @@ class _ExportOptionCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                     ),
                   ],
                 ),

@@ -22,32 +22,35 @@ import 'services/gemma_inference_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // 初始化数据库服务
   final database = AppDatabase();
   final databaseService = DatabaseService(database);
-  
+
   // 初始化应用内模型服务
   final storageManager = ModelStorageManager();
   final capabilityDetector = DeviceCapabilityDetector();
   final simpleDownloader = SimpleModelDownloader(storageManager);
-  final inferenceService = GemmaInferenceService(storageManager, capabilityDetector);
+  final inferenceService = GemmaInferenceService(
+    storageManager,
+    capabilityDetector,
+  );
   final embeddedModelService = EmbeddedModelService(
     storageManager: storageManager,
     capabilityDetector: capabilityDetector,
     downloader: simpleDownloader,
     inferenceService: inferenceService,
   );
-  
+
   // 初始化应用状态
   final appState = AppState(databaseService: databaseService);
-  
+
   // 仅初始化应用状态，延后模型初始化
   await appState.initialize();
-  
+
   // 检查是否显示新手引导
   final hasSeenOnboarding = await OnboardingService.hasSeenOnboarding();
-  
+
   runApp(
     MultiProvider(
       providers: [
@@ -67,10 +70,7 @@ void main() async {
 class PlantMeetApp extends StatelessWidget {
   final bool hasSeenOnboarding;
 
-  const PlantMeetApp({
-    super.key,
-    required this.hasSeenOnboarding,
-  });
+  const PlantMeetApp({super.key, required this.hasSeenOnboarding});
 
   @override
   Widget build(BuildContext context) {
@@ -82,10 +82,7 @@ class PlantMeetApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-        ),
+        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
         cardTheme: CardThemeData(
           elevation: 2,
           shape: RoundedRectangleBorder(
@@ -117,7 +114,8 @@ class PlantMeetApp extends StatelessWidget {
         '/gallery': (context) => const GalleryScreen(),
         '/onboarding': (context) => const OnboardingScreen(),
         '/error-demo': (context) => const ErrorDemoScreen(),
-        '/embedded-model-manager': (context) => const EmbeddedModelManagerScreen(),
+        '/embedded-model-manager': (context) =>
+            const EmbeddedModelManagerScreen(),
         '/mnn-chat-config': (context) => const MNNChatConfigScreen(),
         '/cloud-service-config': (context) => const CloudServiceConfigScreen(),
       },

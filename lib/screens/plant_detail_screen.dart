@@ -11,9 +11,7 @@ class PlantDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('植物详情'),
-      ),
+      appBar: AppBar(title: const Text('植物详情')),
       body: Consumer<AppState>(
         builder: (context, appState, child) {
           final species = appState.species.firstWhere(
@@ -47,10 +45,11 @@ class PlantDetailScreen extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           species.scientificName,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontStyle: FontStyle.italic,
-                            color: Colors.grey[600],
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey[600],
+                              ),
                         ),
                         if (species.isToxic == true) ...[
                           const SizedBox(height: 16),
@@ -63,10 +62,7 @@ class PlantDetailScreen extends StatelessWidget {
                             ),
                             child: Row(
                               children: [
-                                Icon(
-                                  Icons.warning,
-                                  color: Colors.orange[600],
-                                ),
+                                Icon(Icons.warning, color: Colors.orange[600]),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -146,9 +142,7 @@ class PlantDetailScreen extends StatelessWidget {
                           subtitle: encounter.location != null
                               ? Text(encounter.location!)
                               : null,
-                          trailing: Text(
-                            '${encounter.photoPaths.length} 张照片',
-                          ),
+                          trailing: Text('${encounter.photoPaths.length} 张照片'),
                         ),
                       );
                     },

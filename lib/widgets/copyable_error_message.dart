@@ -28,11 +28,7 @@ class CopyableErrorMessage extends StatelessWidget {
           if (title != null)
             Row(
               children: [
-                Icon(
-                  Icons.error_outline,
-                  color: Colors.red.shade700,
-                  size: 20,
-                ),
+                Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -122,11 +118,7 @@ class ErrorDialog extends StatelessWidget {
     return AlertDialog(
       title: Row(
         children: [
-          Icon(
-            Icons.error_outline,
-            color: Colors.red.shade700,
-            size: 24,
-          ),
+          Icon(Icons.error_outline, color: Colors.red.shade700, size: 24),
           const SizedBox(width: 8),
           Text(title ?? '错误'),
         ],
@@ -138,15 +130,9 @@ class ErrorDialog extends StatelessWidget {
           Text(message),
           if (details != null) ...[
             const SizedBox(height: 16),
-            const Text(
-              '详细信息:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+            const Text('详细信息:', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            CopyableErrorMessage(
-              message: details!,
-              onCopy: onCopy,
-            ),
+            CopyableErrorMessage(message: details!, onCopy: onCopy),
           ],
         ],
       ),
@@ -190,7 +176,7 @@ class ErrorSnackBar {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: const Icon(
@@ -218,10 +204,7 @@ class ErrorSnackBar {
                   ],
                   Text(
                     message,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
                   ),
                 ],
               ),
@@ -231,9 +214,7 @@ class ErrorSnackBar {
         backgroundColor: Theme.of(context).colorScheme.error,
         duration: duration,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       ),
     );

@@ -29,7 +29,7 @@ class LLMPromptTemplates {
     String? location,
   }) {
     final contextInfo = _buildContextInfo(userContext, season, location);
-    
+
     return '''
 请识别图片中的植物，并提供生活化的详细信息。
 
@@ -224,25 +224,29 @@ $contextInfo
   }
 
   /// 构建上下文信息
-  static String _buildContextInfo(String? userContext, String? season, String? location) {
+  static String _buildContextInfo(
+    String? userContext,
+    String? season,
+    String? location,
+  ) {
     final contextParts = <String>[];
-    
+
     if (userContext != null && userContext.isNotEmpty) {
       contextParts.add('用户补充信息：$userContext');
     }
-    
+
     if (season != null && season.isNotEmpty) {
       contextParts.add('当前季节：$season');
     }
-    
+
     if (location != null && location.isNotEmpty) {
       contextParts.add('地理位置：$location');
     }
-    
+
     if (contextParts.isEmpty) {
       return '';
     }
-    
+
     return '''
 # 上下文信息
 ${contextParts.join('\n')}
@@ -252,7 +256,10 @@ ${contextParts.join('\n')}
   }
 
   /// 获取错误恢复提示词
-  static String getErrorRecoveryPrompt(String originalPrompt, String errorMessage) {
+  static String getErrorRecoveryPrompt(
+    String originalPrompt,
+    String errorMessage,
+  ) {
     return '''
 之前的识别请求遇到了问题：$errorMessage
 
@@ -274,7 +281,7 @@ $originalPrompt
       'success': {'type': 'boolean'},
       'confidence': {
         'type': 'string',
-        'enum': ['很确定', '比较确定', '可能是', '不太确定']
+        'enum': ['很确定', '比较确定', '可能是', '不太确定'],
       },
       'primary_result': {
         'type': 'object',
@@ -285,7 +292,7 @@ $originalPrompt
           'description': {'type': 'string'},
           'key_features': {
             'type': 'array',
-            'items': {'type': 'string'}
+            'items': {'type': 'string'},
           },
           'safety': {
             'type': 'object',
@@ -293,17 +300,17 @@ $originalPrompt
             'properties': {
               'level': {
                 'type': 'string',
-                'enum': ['safe', 'caution', 'toxic', 'dangerous']
+                'enum': ['safe', 'caution', 'toxic', 'dangerous'],
               },
               'description': {'type': 'string'},
               'warnings': {
                 'type': 'array',
-                'items': {'type': 'string'}
-              }
-            }
-          }
-        }
-      }
-    }
+                'items': {'type': 'string'},
+              },
+            },
+          },
+        },
+      },
+    },
   };
 }

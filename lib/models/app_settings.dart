@@ -37,13 +37,16 @@ class AppSettings {
         (e) => e.name == json['preferred_recognition_method'],
         orElse: () => RecognitionMethod.hybrid,
       ),
-      recognitionMethodFallbackOrder: json['recognition_method_fallback_order'] != null
+      recognitionMethodFallbackOrder:
+          json['recognition_method_fallback_order'] != null
           ? (json['recognition_method_fallback_order'] as List)
-              .map((e) => RecognitionMethod.values.firstWhere(
-                (method) => method.name == e,
-                orElse: () => RecognitionMethod.hybrid,
-              ))
-              .toList()
+                .map(
+                  (e) => RecognitionMethod.values.firstWhere(
+                    (method) => method.name == e,
+                    orElse: () => RecognitionMethod.hybrid,
+                  ),
+                )
+                .toList()
           : const [
               RecognitionMethod.embedded,
               RecognitionMethod.local,
@@ -61,7 +64,9 @@ class AppSettings {
       'save_original_photos': saveOriginalPhotos,
       'enable_local_recognition': enableLocalRecognition,
       'preferred_recognition_method': preferredRecognitionMethod.name,
-      'recognition_method_fallback_order': recognitionMethodFallbackOrder.map((e) => e.name).toList(),
+      'recognition_method_fallback_order': recognitionMethodFallbackOrder
+          .map((e) => e.name)
+          .toList(),
     };
   }
 
@@ -81,14 +86,16 @@ class AppSettings {
       enableLocation: enableLocation ?? this.enableLocation,
       autoSaveLocation: autoSaveLocation ?? this.autoSaveLocation,
       saveOriginalPhotos: saveOriginalPhotos ?? this.saveOriginalPhotos,
-      enableLocalRecognition: enableLocalRecognition ?? this.enableLocalRecognition,
-      preferredRecognitionMethod: preferredRecognitionMethod ?? this.preferredRecognitionMethod,
-      recognitionMethodFallbackOrder: recognitionMethodFallbackOrder ?? this.recognitionMethodFallbackOrder,
+      enableLocalRecognition:
+          enableLocalRecognition ?? this.enableLocalRecognition,
+      preferredRecognitionMethod:
+          preferredRecognitionMethod ?? this.preferredRecognitionMethod,
+      recognitionMethodFallbackOrder:
+          recognitionMethodFallbackOrder ?? this.recognitionMethodFallbackOrder,
     );
   }
 
   bool get isConfigured {
     return baseUrl?.isNotEmpty == true && apiKey?.isNotEmpty == true;
   }
-
 }

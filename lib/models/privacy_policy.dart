@@ -2,7 +2,7 @@
 class PrivacyPolicy {
   static const String currentVersion = '1.0.0';
   static const String lastUpdated = '2024-08-12';
-  
+
   // 隐私政策内容 - 符合中国大陆合规要求
   static const String privacyPolicyContent = '''
 # PlantMeet 隐私政策
@@ -368,7 +368,7 @@ class PolicyConsent {
   final String? userAgreementVersion;
   final String? privacyPolicyVersion;
   final DateTime? consentDate;
-  
+
   const PolicyConsent({
     this.hasAcceptedUserAgreement = false,
     this.hasAcceptedPrivacyPolicy = false,
@@ -376,14 +376,15 @@ class PolicyConsent {
     this.privacyPolicyVersion,
     this.consentDate,
   });
-  
-  bool get isFullyConsented => hasAcceptedUserAgreement && hasAcceptedPrivacyPolicy;
-  
+
+  bool get isFullyConsented =>
+      hasAcceptedUserAgreement && hasAcceptedPrivacyPolicy;
+
   bool get needsUpdate {
     return userAgreementVersion != PrivacyPolicy.currentVersion ||
-           privacyPolicyVersion != PrivacyPolicy.currentVersion;
+        privacyPolicyVersion != PrivacyPolicy.currentVersion;
   }
-  
+
   PolicyConsent copyWith({
     bool? hasAcceptedUserAgreement,
     bool? hasAcceptedPrivacyPolicy,
@@ -392,14 +393,16 @@ class PolicyConsent {
     DateTime? consentDate,
   }) {
     return PolicyConsent(
-      hasAcceptedUserAgreement: hasAcceptedUserAgreement ?? this.hasAcceptedUserAgreement,
-      hasAcceptedPrivacyPolicy: hasAcceptedPrivacyPolicy ?? this.hasAcceptedPrivacyPolicy,
+      hasAcceptedUserAgreement:
+          hasAcceptedUserAgreement ?? this.hasAcceptedUserAgreement,
+      hasAcceptedPrivacyPolicy:
+          hasAcceptedPrivacyPolicy ?? this.hasAcceptedPrivacyPolicy,
       userAgreementVersion: userAgreementVersion ?? this.userAgreementVersion,
       privacyPolicyVersion: privacyPolicyVersion ?? this.privacyPolicyVersion,
       consentDate: consentDate ?? this.consentDate,
     );
   }
-  
+
   Map<String, dynamic> toJson() {
     return {
       'hasAcceptedUserAgreement': hasAcceptedUserAgreement,
@@ -409,14 +412,14 @@ class PolicyConsent {
       'consentDate': consentDate?.toIso8601String(),
     };
   }
-  
+
   factory PolicyConsent.fromJson(Map<String, dynamic> json) {
     return PolicyConsent(
       hasAcceptedUserAgreement: json['hasAcceptedUserAgreement'] ?? false,
       hasAcceptedPrivacyPolicy: json['hasAcceptedPrivacyPolicy'] ?? false,
       userAgreementVersion: json['userAgreementVersion'],
       privacyPolicyVersion: json['privacyPolicyVersion'],
-      consentDate: json['consentDate'] != null 
+      consentDate: json['consentDate'] != null
           ? DateTime.parse(json['consentDate'])
           : null,
     );

@@ -62,7 +62,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
-            
+
             // 页面指示器
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
@@ -75,8 +75,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: _currentPage == index ? 24 : 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: _currentPage == index 
-                          ? Colors.green 
+                      color: _currentPage == index
+                          ? Colors.green
                           : Colors.grey[300],
                       borderRadius: BorderRadius.circular(4),
                     ),
@@ -84,10 +84,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
             ),
-            
+
             // 底部按钮
             Padding(
-              padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + MediaQuery.of(context).padding.bottom),
+              padding: EdgeInsets.fromLTRB(
+                24,
+                24,
+                24,
+                24 + MediaQuery.of(context).padding.bottom,
+              ),
               child: Row(
                 children: [
                   if (_currentPage > 0)
@@ -102,20 +107,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     )
                   else
                     const Spacer(),
-                  
+
                   const Spacer(),
-                  
+
                   ElevatedButton(
-                    onPressed: _isRequestingPermissions ? null : () {
-                      if (_currentPage < _pages.length - 1) {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      } else {
-                        _completeOnboarding();
-                      }
-                    },
+                    onPressed: _isRequestingPermissions
+                        ? null
+                        : () {
+                            if (_currentPage < _pages.length - 1) {
+                              _pageController.nextPage(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            } else {
+                              _completeOnboarding();
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
@@ -166,15 +173,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               color: Colors.green.shade50,
               borderRadius: BorderRadius.circular(60),
             ),
-            child: Icon(
-              page.image,
-              size: 60,
-              color: Colors.green.shade600,
-            ),
+            child: Icon(page.image, size: 60, color: Colors.green.shade600),
           ),
-          
+
           const SizedBox(height: 40),
-          
+
           Text(
             page.subtitle,
             style: TextStyle(
@@ -183,20 +186,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               fontWeight: FontWeight.w500,
             ),
           ),
-          
+
           const SizedBox(height: 8),
-          
+
           Text(
             page.title,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           Text(
             page.description,
             style: TextStyle(
@@ -220,20 +220,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // 请求权限
       await _permissionService.requestAllPermissions();
       await OnboardingService.setPermissionsRequested();
-      
+
       // 标记新手引导完成
       await OnboardingService.setOnboardingSeen();
-      
+
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('权限请求失败: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('权限请求失败: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {

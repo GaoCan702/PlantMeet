@@ -44,15 +44,21 @@ class AppSettingsTable extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get baseUrl => text().nullable()();
   TextColumn get apiKey => text().nullable()();
-  BoolColumn get enableLocation => boolean().withDefault(const Constant(true))();
-  BoolColumn get autoSaveLocation => boolean().withDefault(const Constant(true))();
-  BoolColumn get saveOriginalPhotos => boolean().withDefault(const Constant(true))();
-  BoolColumn get enableLocalRecognition => boolean().withDefault(const Constant(true))();
+  BoolColumn get enableLocation =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get autoSaveLocation =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get saveOriginalPhotos =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get enableLocalRecognition =>
+      boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }
 
-@DriftDatabase(tables: [PlantSpeciesTable, PlantEncounterTable, AppSettingsTable])
+@DriftDatabase(
+  tables: [PlantSpeciesTable, PlantEncounterTable, AppSettingsTable],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -67,7 +73,10 @@ class AppDatabase extends _$AppDatabase {
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 3) {
         // 添加 enableLocalRecognition 字段
-        await m.addColumn(appSettingsTable, appSettingsTable.enableLocalRecognition);
+        await m.addColumn(
+          appSettingsTable,
+          appSettingsTable.enableLocalRecognition,
+        );
       }
     },
   );

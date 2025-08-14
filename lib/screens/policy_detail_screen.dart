@@ -6,7 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 class PolicyDetailScreen extends StatefulWidget {
   final String title;
   final String content;
-  
+
   const PolicyDetailScreen({
     Key? key,
     required this.title,
@@ -20,20 +20,20 @@ class PolicyDetailScreen extends StatefulWidget {
 class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showScrollToTop = false;
-  
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
   }
-  
+
   @override
   void dispose() {
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     super.dispose();
   }
-  
+
   void _scrollListener() {
     if (_scrollController.offset > 300 && !_showScrollToTop) {
       setState(() {
@@ -45,7 +45,7 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
       });
     }
   }
-  
+
   void _scrollToTop() {
     _scrollController.animateTo(
       0,
@@ -53,16 +53,14 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
       curve: Curves.easeInOut,
     );
   }
-  
+
   void _copyToClipboard() {
     Clipboard.setData(ClipboardData(text: widget.content));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('协议内容已复制到剪贴板'),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -157,7 +155,9 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
                   fontSize: 16, // 确保列表文字足够大
                 ),
                 code: TextStyle(
-                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
                   fontFamily: 'monospace',
@@ -166,15 +166,21 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withValues(alpha: 0.2),
                   ),
                 ),
                 blockquote: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontStyle: FontStyle.italic,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.8),
                 ),
                 blockquoteDecoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withValues(alpha: 0.1),
                   border: Border(
                     left: BorderSide(
                       color: Theme.of(context).colorScheme.primary,
@@ -182,12 +188,14 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
                     ),
                   ),
                 ),
-                tableHead: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                tableHead: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 tableBody: Theme.of(context).textTheme.bodySmall,
                 tableBorder: TableBorder.all(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.2),
                 ),
                 // 链接样式
                 a: TextStyle(
@@ -198,7 +206,9 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
                 horizontalRuleDecoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.2),
                       width: 1,
                     ),
                   ),
@@ -213,7 +223,7 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
               },
             ),
           ),
-          
+
           // 滚动到顶部按钮
           if (_showScrollToTop)
             Positioned(
@@ -231,12 +241,19 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
       // 底部信息栏
       bottomSheet: Container(
         width: double.infinity,
-        padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          12 + MediaQuery.of(context).padding.bottom,
+        ),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
           border: Border(
             top: BorderSide(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+              color: Theme.of(
+                context,
+              ).colorScheme.outline.withValues(alpha: 0.2),
             ),
           ),
         ),
@@ -245,21 +262,27 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
             Icon(
               Icons.info_outline,
               size: 16,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 '本协议具有法律约束力，请仔细阅读',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -275,7 +298,7 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
       ),
     );
   }
-  
+
   void _shareContent() {
     // 实现分享功能
     // 需要添加 share_plus 依赖
@@ -285,24 +308,24 @@ class _PolicyDetailScreenState extends State<PolicyDetailScreen> {
       subject: widget.title,
     );
     */
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('分享功能开发中')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('分享功能开发中')));
   }
-  
+
   void _printContent() {
     // 实现打印功能
     // 可以集成打印插件或生成PDF
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('打印功能开发中')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('打印功能开发中')));
   }
-  
+
   void _handleLinkTap(String url) {
     // 处理链接点击
     // 可以打开浏览器或显示详情
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('链接: $url')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('链接: $url')));
   }
 }

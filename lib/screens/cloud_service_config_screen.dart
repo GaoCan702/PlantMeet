@@ -9,7 +9,8 @@ class CloudServiceConfigScreen extends StatefulWidget {
   const CloudServiceConfigScreen({super.key});
 
   @override
-  State<CloudServiceConfigScreen> createState() => _CloudServiceConfigScreenState();
+  State<CloudServiceConfigScreen> createState() =>
+      _CloudServiceConfigScreenState();
 }
 
 class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
@@ -40,10 +41,14 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
 
   Future<void> _autoSaveSettings() async {
     final appState = Provider.of<AppState>(context, listen: false);
-    
+
     final updatedSettings = _settings.copyWith(
-      baseUrl: _cloudApiUrlController.text.isEmpty ? null : _cloudApiUrlController.text,
-      apiKey: _cloudApiKeyController.text.isEmpty ? null : _cloudApiKeyController.text,
+      baseUrl: _cloudApiUrlController.text.isEmpty
+          ? null
+          : _cloudApiUrlController.text,
+      apiKey: _cloudApiKeyController.text.isEmpty
+          ? null
+          : _cloudApiKeyController.text,
     );
 
     await appState.updateSettings(updatedSettings);
@@ -61,13 +66,16 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('云端服务'),
-      ),
+      appBar: AppBar(title: const Text('云端服务')),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.of(context).padding.bottom,
+          ),
           children: [
             _buildHeaderSection(),
             const SizedBox(height: 24),
@@ -139,12 +147,9 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
 
   Widget _buildFeatureChip(String label, Color color) {
     return Chip(
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 12),
-      ),
-      backgroundColor: color.withOpacity(0.1),
-      side: BorderSide(color: color.withOpacity(0.3)),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      backgroundColor: color.withValues(alpha: 0.1),
+      side: BorderSide(color: color.withValues(alpha: 0.3)),
     );
   }
 
@@ -155,10 +160,7 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '服务配置',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('服务配置', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             SwitchListTile(
               title: const Text('启用云端服务'),
@@ -183,7 +185,8 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
                 _onSettingChanged();
               },
               validator: (value) {
-                if (_settings.enableLocalRecognition && (value == null || value.isEmpty)) {
+                if (_settings.enableLocalRecognition &&
+                    (value == null || value.isEmpty)) {
                   return '启用云端服务需要配置API地址';
                 }
                 return null;
@@ -214,7 +217,8 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
                 _onSettingChanged();
               },
               validator: (value) {
-                if (_settings.enableLocalRecognition && (value == null || value.isEmpty)) {
+                if (_settings.enableLocalRecognition &&
+                    (value == null || value.isEmpty)) {
                   return '云端服务通常需要API密钥进行身份验证';
                 }
                 return null;
@@ -233,16 +237,13 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '连接测试',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('连接测试', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               '测试与云端API服务的连接状态和识别功能',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 16),
             Row(
@@ -250,7 +251,7 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: _isTesting ? null : _testConnection,
-                    icon: _isTesting 
+                    icon: _isTesting
                         ? const SizedBox(
                             width: 18,
                             height: 18,
@@ -263,7 +264,7 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _settings.enableLocalRecognition 
+                    onPressed: _settings.enableLocalRecognition
                         ? () => _testRecognition()
                         : null,
                     icon: const Icon(Icons.science),
@@ -284,10 +285,12 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -303,9 +306,9 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
               const SizedBox(width: 8),
               Text(
                 'API状态信息',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -314,14 +317,8 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
             '状态：${_settings.enableLocalRecognition ? "已配置" : "未配置"}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          Text(
-            '连接：等待测试',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          Text(
-            '最后测试：从未测试',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          Text('连接：等待测试', style: Theme.of(context).textTheme.bodySmall),
+          Text('最后测试：从未测试', style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );
@@ -334,10 +331,7 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '高级选项',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('高级选项', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -382,28 +376,24 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
 
   Future<void> _testConnection() async {
     if (!_formKey.currentState!.validate()) {
-      ErrorSnackBar.show(
-        context,
-        message: '请先填写必要配置信息',
-        title: '配置错误',
-      );
+      ErrorSnackBar.show(context, message: '请先填写必要配置信息', title: '配置错误');
       return;
     }
 
     if (!_settings.enableLocalRecognition) {
-      ErrorSnackBar.show(
-        context,
-        message: '请先启用云端服务',
-        title: '配置错误',
-      );
+      ErrorSnackBar.show(context, message: '请先启用云端服务', title: '配置错误');
       return;
     }
 
     setState(() {
       _isTesting = true;
       _settings = _settings.copyWith(
-        baseUrl: _cloudApiUrlController.text.isEmpty ? null : _cloudApiUrlController.text,
-        apiKey: _cloudApiKeyController.text.isEmpty ? null : _cloudApiKeyController.text,
+        baseUrl: _cloudApiUrlController.text.isEmpty
+            ? null
+            : _cloudApiUrlController.text,
+        apiKey: _cloudApiKeyController.text.isEmpty
+            ? null
+            : _cloudApiKeyController.text,
       );
     });
 
@@ -429,11 +419,7 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ErrorSnackBar.show(
-          context,
-          message: '连接测试异常：$e',
-          title: '测试异常',
-        );
+        ErrorSnackBar.show(context, message: '连接测试异常：$e', title: '测试异常');
       }
     } finally {
       if (mounted) {

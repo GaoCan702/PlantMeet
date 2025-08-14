@@ -1,4 +1,3 @@
-
 import 'recognition_result.dart';
 
 class PlantEncounter {
@@ -95,8 +94,4 @@ class PlantEncounter {
   }
 }
 
-enum RecognitionSource {
-  camera,
-  gallery,
-}
-
+enum RecognitionSource { camera, gallery }

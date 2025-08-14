@@ -20,7 +20,7 @@ void main() {
     final database = AppDatabase();
     final databaseService = DatabaseService(database);
     final appState = AppState(databaseService: databaseService);
-    
+
     // Build our app and trigger a frame.
     await tester.pumpWidget(
       ChangeNotifierProvider(
