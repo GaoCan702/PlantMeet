@@ -11,7 +11,7 @@ import 'embedded_model_service.dart';
 
 /// 植物识别服务 - 支持应用内模型、MNN Chat和云端识别的生活化植物识别
 class RecognitionService {
-  static const bool _useMockData = true; // 开发阶段使用模拟数据
+  static const bool _useMockData = false; // 禁用模拟数据：缺少真实服务时直接中断
   static const bool _preferLocalLLM = true; // 优先使用本地大模型
 
   final Logger _logger = Logger();
@@ -90,9 +90,17 @@ class RecognitionService {
     bool quickMode = false,
     RecognitionMethod? preferredMethod,
   }) async {
-    // 开发阶段使用模拟数据演示
-    if (_useMockData) {
-      return await _getMockRecognitionResult(imageFile);
+    // 若无任何真实服务可用，直接中断，不使用模拟数据
+    final hasEmbedded = _isEmbeddedModelReady;
+    final hasMNN = _preferLocalLLM && _isMNNChatReady;
+    final hasCloud = settings.isConfigured;
+    final anyAvailable = hasEmbedded || hasMNN || hasCloud;
+
+    if (!anyAvailable) {
+      return RecognitionResponse.error(
+        error: '没有可用的识别服务：请先下载并加载本地模型，或确保MNN Chat服务可用，或在云端配置API。',
+        method: preferredMethod ?? settings.preferredRecognitionMethod,
+      );
     }
 
     // 根据用户偏好或自动选择识别方法，支持回退机制
