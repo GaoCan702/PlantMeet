@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
-// import 'package:flutter_gemma/flutter_gemma.dart';
+import 'package:flutter_gemma/flutter_gemma.dart';
+import 'package:flutter_gemma/core/model.dart';
 import 'package:logger/logger.dart';
 import 'package:image/image.dart' as img;
 import '../models/embedded_model.dart';
@@ -8,46 +9,7 @@ import '../models/recognition_result.dart';
 import 'model_storage_manager.dart';
 import 'device_capability_detector.dart';
 
-// Mock implementation for FlutterGemmaPlugin until actual API is available
-class FlutterGemmaPlugin {
-  Future<void> init({
-    required String modelPath,
-    required int maxTokens,
-    required double temperature,
-    required int topK,
-    required int randomSeed,
-  }) async {
-    // Mock initialization
-    await Future.delayed(const Duration(seconds: 2));
-  }
-
-  Future<String> generateResponseWithImage({
-    required String prompt,
-    required Uint8List image,
-  }) async {
-    // Mock response for plant identification
-    await Future.delayed(const Duration(seconds: 5));
-    return '''
-植物识别结果：
-1. 中文名：玫瑰花
-   学名：Rosa rugosa
-   置信度：85
-   特征：花朵红色，有香味，茎上有刺
-
-2. 中文名：月季花
-   学名：Rosa chinensis
-   置信度：75
-   特征：花朵较大，颜色多样，四季开花
-
-3. 中文名：蔷薇花
-   学名：Rosa multiflora
-   置信度：60
-   特征：花朵较小，簇生，有淡香
-
-毒性提醒：无明显毒性记录，但茎上有刺，注意防护
-''';
-  }
-}
+// 使用正式的 flutter_gemma 插件
 
 class GemmaInferenceService {
   static const String _modelId = 'google/gemma-3n-E4B-it-litert-preview';
@@ -57,7 +19,8 @@ class GemmaInferenceService {
   final DeviceCapabilityDetector _capabilityDetector;
   final Logger _logger = Logger();
 
-  FlutterGemmaPlugin? _gemmaPlugin;
+  InferenceModel? _gemmaModel;
+  InferenceChat? _chat;
   bool _isModelLoaded = false;
   bool _isInitializing = false;
 
@@ -89,22 +52,30 @@ class GemmaInferenceService {
 
       // Get device capability for optimal configuration
       final capability = await _capabilityDetector.detect();
-
-      // Initialize Gemma plugin
-      _gemmaPlugin = FlutterGemmaPlugin();
-
-      // Configure based on device capability
-      final config = _createModelConfig(capability, modelFile.path);
-
-      await _gemmaPlugin!.init(
-        modelPath: modelFile.path,
-        maxTokens: config.maxTokens,
-        temperature: config.temperature,
-        topK: config.topK,
-        randomSeed: config.randomSeed,
+      // 使用插件：设置模型路径并创建模型（开启多模态）
+      await FlutterGemmaPlugin.instance.modelManager.setModelPath(
+        modelFile.path,
       );
 
-      // Warm up the model with a simple inference
+      final config = _createModelConfig(capability, modelFile.path);
+      final preferred = _mapPreferredBackend(capability.recommendedBackend);
+
+      _gemmaModel = await FlutterGemmaPlugin.instance.createModel(
+        modelType: ModelType.gemmaIt,
+        preferredBackend: preferred,
+        supportImage: true,
+        maxNumImages: 1,
+        maxTokens: config.maxTokens,
+      );
+
+      _chat = await _gemmaModel!.createChat(
+        temperature: config.temperature,
+        randomSeed: config.randomSeed,
+        topK: config.topK,
+        topP: 0.9,
+        supportImage: true,
+      );
+
       await _warmupModel();
 
       _isModelLoaded = true;
@@ -122,7 +93,7 @@ class GemmaInferenceService {
     File imageFile, {
     int maxResults = 3,
   }) async {
-    if (!_isModelLoaded || _gemmaPlugin == null) {
+    if (!_isModelLoaded || _chat == null) {
       throw Exception('Model not initialized. Call initializeModel() first.');
     }
 
@@ -135,12 +106,18 @@ class GemmaInferenceService {
       // Create prompt for plant identification
       final prompt = _createPlantIdentificationPrompt();
 
-      // Perform inference
+      // 通过 Chat 提交文本 + 图片并获取文本响应
       final startTime = DateTime.now();
-      final response = await _gemmaPlugin!.generateResponseWithImage(
-        prompt: prompt,
-        image: processedImage,
+      await _chat!.addQueryChunk(
+        Message.withImage(text: prompt, imageBytes: processedImage, isUser: true),
       );
+      final chatResp = await _chat!.generateChatResponse();
+      String response;
+      if (chatResp is TextResponse) {
+        response = chatResp.token;
+      } else {
+        response = chatResp.toString();
+      }
       final inferenceTime = DateTime.now().difference(startTime);
 
       _logger.i('Inference completed in ${inferenceTime.inMilliseconds}ms');
@@ -402,13 +379,12 @@ class GemmaInferenceService {
     try {
       _logger.i('Warming up model...');
 
-      // Create a small dummy image for warmup
+      if (_chat == null) return;
       final dummyImage = _createDummyImage();
-
-      await _gemmaPlugin!.generateResponseWithImage(
-        prompt: '这是什么？',
-        image: dummyImage,
+      await _chat!.addQueryChunk(
+        Message.withImage(text: '这是什么？', imageBytes: dummyImage, isUser: true),
       );
+      await _chat!.generateChatResponse();
 
       _logger.i('Model warmup completed');
     } catch (e) {
@@ -424,21 +400,32 @@ class GemmaInferenceService {
   }
 
   Future<void> unloadModel() async {
-    if (_gemmaPlugin != null) {
-      try {
-        // Note: FlutterGemma might not have explicit unload method
-        // This would depend on the actual plugin implementation
-        _gemmaPlugin = null;
-        _isModelLoaded = false;
-        _logger.i('Model unloaded');
-      } catch (e) {
-        _logger.e('Error unloading model: $e');
-      }
+    try {
+      await _chat?.session.close();
+      await _gemmaModel?.close();
+    } catch (e) {
+      _logger.e('Error unloading model: $e');
+    } finally {
+      _chat = null;
+      _gemmaModel = null;
+      _isModelLoaded = false;
+      _logger.i('Model unloaded');
     }
   }
 
   void dispose() {
     unloadModel();
+  }
+
+  PreferredBackend? _mapPreferredBackend(InferenceBackend backend) {
+    switch (backend) {
+      case InferenceBackend.cpu:
+        return PreferredBackend.cpu;
+      case InferenceBackend.gpu:
+        return PreferredBackend.gpu;
+      case InferenceBackend.auto:
+        return null; // 让插件自动选择
+    }
   }
 }
 
