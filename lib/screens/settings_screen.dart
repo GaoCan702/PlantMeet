@@ -122,6 +122,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            // 存储管理区域
+            _buildStorageManagementSection(),
+            const SizedBox(height: 16),
             // 隐私协议区域
             Card(
               child: Padding(
@@ -669,6 +672,222 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return '正在更新模型，请稍候...';
       default:
         return '点击"管理AI模型"下载离线识别模型';
+    }
+  }
+
+  /// 构建存储管理区域
+  Widget _buildStorageManagementSection() {
+    return Consumer<EmbeddedModelService>(
+      builder: (context, modelService, child) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.storage, color: Theme.of(context).primaryColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      '存储管理',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // 显示模型存储状态
+                FutureBuilder<Map<String, dynamic>>(
+                  future: modelService.getModelStats(),
+                  builder: (context, snapshot) {
+                    final stats = snapshot.data ?? {};
+                    final modelSizeMB = (stats['model_size_mb'] ?? 0.0) as double;
+                    final modelSizeFormatted = stats['model_size_mb_formatted'] ?? '0.0';
+                    final isModelDownloaded = modelService.isModelDownloaded;
+                    
+                    return Column(
+                      children: [
+                        // 模型存储信息
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isModelDownloaded 
+                                ? Colors.green.shade50 
+                                : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isModelDownloaded 
+                                  ? Colors.green.shade200 
+                                  : Colors.grey.shade200,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    isModelDownloaded ? Icons.check_circle : Icons.cloud_download,
+                                    size: 16,
+                                    color: isModelDownloaded ? Colors.green.shade600 : Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isModelDownloaded ? 'AI模型已下载' : 'AI模型未下载',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: isModelDownloaded ? Colors.green.shade700 : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (isModelDownloaded) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '占用空间：${_formatFileSize(modelSizeMB * 1024 * 1024)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green.shade600,
+                                  ),
+                                ),
+                              ] else ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '下载后约占用 2.5 GB 存储空间',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // 操作按钮
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => Navigator.of(context).pushNamed('/embedded-model-manager'),
+                                icon: const Icon(Icons.settings),
+                                label: const Text('详细管理'),
+                              ),
+                            ),
+                            if (isModelDownloaded) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _showQuickDeleteDialog(context, modelService, modelSizeMB),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red.shade600,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  icon: const Icon(Icons.delete_sweep),
+                                  label: const Text('清理模型'),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 显示快速删除对话框
+  Future<void> _showQuickDeleteDialog(
+    BuildContext context, 
+    EmbeddedModelService modelService,
+    double modelSizeMB,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.delete_sweep, color: Colors.red.shade600),
+            const SizedBox(width: 8),
+            const Text('清理存储空间'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('释放 ${_formatFileSize(modelSizeMB * 1024 * 1024)} 存储空间？'),
+            const SizedBox(height: 8),
+            Text(
+              '删除后若需要离线识别，需要重新下载约2.5GB的模型文件。',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('确认清理'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await modelService.deleteModel();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已释放 ${_formatFileSize(modelSizeMB * 1024 * 1024)} 存储空间'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('清理失败：$e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  /// 格式化文件大小显示
+  String _formatFileSize(double sizeInBytes) {
+    if (sizeInBytes < 1024) {
+      return '${sizeInBytes.toStringAsFixed(0)} B';
+    } else if (sizeInBytes < 1024 * 1024) {
+      return '${(sizeInBytes / 1024).toStringAsFixed(1)} KB';
+    } else if (sizeInBytes < 1024 * 1024 * 1024) {
+      return '${(sizeInBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    } else {
+      return '${(sizeInBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
     }
   }
 }

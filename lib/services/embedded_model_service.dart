@@ -307,7 +307,8 @@ class EmbeddedModelService extends ChangeNotifier {
       'model_id': _modelId,
       'status': _state.status.toString(),
       'model_size_bytes': modelSize,
-      'model_size_mb': (modelSize / (1024 * 1024)).toStringAsFixed(1),
+      'model_size_mb': modelSize / (1024 * 1024), // 返回数字而不是字符串
+      'model_size_mb_formatted': (modelSize / (1024 * 1024)).toStringAsFixed(1), // 格式化的字符串
       'is_ready': _state.status == ModelStatus.ready,
       'storage_info': storageInfo,
       'capability': _state.capability?.additionalInfo ?? {},

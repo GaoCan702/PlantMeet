@@ -518,7 +518,7 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('模型大小：${stats['model_size_mb']} MB'),
+            Text('模型大小：${_formatFileSize((stats['model_size_bytes'] ?? 0).toDouble())}'),
             const SizedBox(height: 8),
             Text('存储路径：应用私有目录'),
             const SizedBox(height: 8),
@@ -539,11 +539,72 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
     BuildContext context,
     EmbeddedModelService modelService,
   ) async {
+    // 获取模型统计信息
+    final stats = await modelService.getModelStats();
+    final modelSizeMB = (stats['model_size_mb'] ?? 0.0) as double;
+    final modelSizeBytes = (stats['model_size_bytes'] ?? 0) as int;
+    
+    if (!context.mounted) return;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除离线AI模型吗？删除后需要重新下载才能使用离线识别功能。'),
+        title: Row(
+          children: [
+            Icon(Icons.delete_forever, color: Colors.red.shade600),
+            const SizedBox(width: 8),
+            const Text('确认删除'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('确定要删除离线AI模型吗？'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.storage, size: 16, color: Colors.red.shade600),
+                      const SizedBox(width: 6),
+                      Text(
+                        '将释放存储空间：${_formatFileSize(modelSizeBytes.toDouble())}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '• 删除后需要重新下载才能使用离线识别',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.red.shade600,
+                    ),
+                  ),
+                  Text(
+                    '• 重新下载需要约2.5GB流量',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.red.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -552,10 +613,10 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.red.shade600,
               foregroundColor: Colors.white,
             ),
-            child: const Text('删除'),
+            child: const Text('确认删除'),
           ),
         ],
       ),
@@ -627,6 +688,19 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
         return '错误';
       case ModelStatus.updating:
         return '更新中';
+    }
+  }
+
+  /// 格式化文件大小显示
+  String _formatFileSize(double sizeInBytes) {
+    if (sizeInBytes < 1024) {
+      return '${sizeInBytes.toStringAsFixed(0)} B';
+    } else if (sizeInBytes < 1024 * 1024) {
+      return '${(sizeInBytes / 1024).toStringAsFixed(1)} KB';
+    } else if (sizeInBytes < 1024 * 1024 * 1024) {
+      return '${(sizeInBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    } else {
+      return '${(sizeInBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
     }
   }
 }
