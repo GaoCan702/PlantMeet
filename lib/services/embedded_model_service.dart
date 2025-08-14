@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'dart:math' as math;
+import 'package:flutter/widgets.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:battery_plus/battery_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
 import '../models/embedded_model.dart';
 import '../models/recognition_result.dart';
@@ -9,7 +13,7 @@ import 'device_capability_detector.dart';
 import 'simple_model_downloader.dart';
 import 'gemma_inference_service.dart';
 
-class EmbeddedModelService extends ChangeNotifier {
+class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
   static const String _modelId =
       'google/gemma-3n-E4B-it-litert-preview'; // 使用支持视觉的 E4B 版本
 
@@ -18,6 +22,12 @@ class EmbeddedModelService extends ChangeNotifier {
   final SimpleModelDownloader _downloader;
   final GemmaInferenceService _inferenceService;
   final Logger _logger = Logger();
+  final Connectivity _connectivity = Connectivity();
+  final Battery _battery = Battery();
+
+  // 指数退避
+  int _retryAttempt = 0;
+  Timer? _retryTimer;
 
   EmbeddedModelState _state = EmbeddedModelState(
     status: ModelStatus.notDownloaded,
@@ -40,6 +50,14 @@ class EmbeddedModelService extends ChangeNotifier {
   Future<void> initialize() async {
     try {
       _logger.i('Initializing embedded model service...');
+      // 监听应用生命周期
+      WidgetsBinding.instance.addObserver(this);
+      // 监听网络变化
+      _connectivity.onConnectivityChanged.listen((results) {
+        _handleConnectivityChange(results);
+      });
+      // 初始化电量与省电模式提示
+      unawaited(_battery.batteryLevel.then((_) {}));
 
       // Check device capability
       final capability = await _capabilityDetector.detect();
@@ -110,13 +128,20 @@ class EmbeddedModelService extends ChangeNotifier {
       _logger.i('Download completed successfully');
       await _onDownloadCompleted();
     } catch (e) {
-      _logger.e('Failed to download model: $e');
-      _updateState(
-        _state.copyWith(
-          status: ModelStatus.error,
-          errorMessage: 'Download failed: $e',
-        ),
-      );
+      // 暂停不视为错误
+      if (e is DownloadPausedException) {
+        _logger.i('Download paused by lifecycle');
+        _downloadStatus = '下载已暂停';
+        notifyListeners();
+      } else {
+        _logger.e('Failed to download model: $e');
+        _updateState(
+          _state.copyWith(
+            status: ModelStatus.error,
+            errorMessage: 'Download failed: $e',
+          ),
+        );
+      }
     }
   }
 
@@ -270,9 +295,125 @@ class EmbeddedModelService extends ChangeNotifier {
     }
   }
 
+  // 生命周期回调：前后台切换时暂停/恢复下载
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_state.status == ModelStatus.downloading) {
+      if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+        _maybePauseForBackground();
+      } else if (state == AppLifecycleState.resumed) {
+        // 回到前台自动续传
+        scheduleMicrotask(() async {
+          try {
+            // 若仅 Wi‑Fi 下载，但当前非 Wi‑Fi，直接暂停并提示
+            if (await _isWifiRequiredAndNotOnWifi()) {
+              _downloadStatus = '等待 Wi‑Fi 连接以继续下载';
+              notifyListeners();
+              _scheduleRetry();
+              return;
+            }
+            // 低电量自动暂停
+            if (await _shouldAutoPauseForBattery()) {
+              _downloadStatus = '电量较低，已暂停下载';
+              notifyListeners();
+              _scheduleRetry();
+              return;
+            }
+            await _downloader.downloadModel(
+              modelId: _modelId,
+              onProgress: (p) => _updateState(_state.copyWith(downloadProgress: p)),
+              onStatusUpdate: (s) {
+                _downloadStatus = s;
+                notifyListeners();
+              },
+            );
+            await _onDownloadCompleted();
+            _resetRetry();
+          } catch (e) {
+            if (e is! DownloadPausedException) {
+              _logger.e('Resume download failed: $e');
+              _updateState(
+                _state.copyWith(status: ModelStatus.error, errorMessage: '$e'),
+              );
+            } else {
+              _scheduleRetry();
+            }
+          }
+        });
+      }
+    }
+  }
+
+  Future<void> _maybePauseForBackground() async {
+    // 读取后台下载策略
+    final prefs = await SharedPreferences.getInstance();
+    final allowBackground = prefs.getBool(_prefsAllowBackgroundKey) ?? false;
+    if (!allowBackground) {
+      try {
+        _downloader.pause();
+        _downloadStatus = '已暂停（前台受限）';
+        notifyListeners();
+      } catch (_) {}
+    }
+  }
+
+  Future<bool> _isWifiRequiredAndNotOnWifi() async {
+    final prefs = await SharedPreferences.getInstance();
+    final wifiOnly = prefs.getBool(_prefsWifiOnlyKey) ?? true;
+    if (!wifiOnly) return false;
+    final results = await _connectivity.checkConnectivity();
+    return !(results.contains(ConnectivityResult.wifi));
+  }
+
+  Future<bool> _shouldAutoPauseForBattery() async {
+    final prefs = await SharedPreferences.getInstance();
+    final autoPause = prefs.getBool(_prefsAutoPauseLowBatteryKey) ?? true;
+    if (!autoPause) return false;
+    final level = await _battery.batteryLevel;
+    final state = await _battery.batteryState; // charging/full/discharging
+    return level <= 15 && state != BatteryState.charging;
+  }
+
+  void _handleConnectivityChange(List<ConnectivityResult> results) {
+    if (_state.status == ModelStatus.downloading) {
+      if (!(results.contains(ConnectivityResult.wifi) || results.contains(ConnectivityResult.mobile))) {
+        // 无网络，暂停
+        try {
+          _downloader.pause();
+          _downloadStatus = '网络中断，已暂停';
+          notifyListeners();
+        } catch (_) {}
+        _scheduleRetry();
+      } else if (results.contains(ConnectivityResult.wifi)) {
+        // 网络恢复，尝试重试
+        _scheduleRetry(immediate: true);
+      }
+    }
+  }
+
+  void _scheduleRetry({bool immediate = false}) {
+    _retryTimer?.cancel();
+    final nextDelay = immediate ? Duration.zero : Duration(seconds: math.min(60, (1 << _retryAttempt)));
+    _retryAttempt = math.min(_retryAttempt + 1, 6); // 最大 64s 上限，最终 clamp 为 60s
+    _retryTimer = Timer(nextDelay, () {
+      if (_state.status == ModelStatus.downloading) {
+        didChangeAppLifecycleState(AppLifecycleState.resumed);
+      }
+    });
+  }
+
+  void _resetRetry() {
+    _retryAttempt = 0;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+  }
   void cancelDownload() {
     if (_state.status == ModelStatus.downloading) {
-      // 简化的下载器不支持取消，直接重置状态
+      // 主动暂停底层下载
+      try {
+        _downloader.pause();
+      } catch (_) {}
+      // 重置状态
       _updateState(
         _state.copyWith(
           status: ModelStatus.notDownloaded,
@@ -281,7 +422,7 @@ class EmbeddedModelService extends ChangeNotifier {
         ),
       );
 
-      _logger.i('Download cancelled (simplified downloader)');
+      _logger.i('Download cancelled by user');
     }
   }
 
@@ -345,6 +486,7 @@ class EmbeddedModelService extends ChangeNotifier {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _inferenceService.dispose();
     super.dispose();
   }
@@ -360,4 +502,9 @@ class EmbeddedModelService extends ChangeNotifier {
   double get downloadProgress => _state.downloadProgress;
   ModelInfo? get modelInfo => _state.modelInfo;
   DeviceCapability? get deviceCapability => _state.capability;
+
+  // 下载策略读取（与设置页使用相同的 key）
+  static const _prefsAllowBackgroundKey = 'allow_background_download';
+  static const _prefsWifiOnlyKey = 'wifi_only_download';
+  static const _prefsAutoPauseLowBatteryKey = 'auto_pause_low_battery';
 }
