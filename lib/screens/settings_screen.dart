@@ -98,9 +98,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // 应用内AI模型管理
             _buildEmbeddedModelSection(),
             const SizedBox(height: 16),
-            // 下载策略
-            _buildDownloadPolicySection(),
-            const SizedBox(height: 16),
+            // 下载策略已迁移到“离线AI模型”页面
             // MNN Chat服务
             _buildMNNChatServiceSection(),
             const SizedBox(height: 16),
@@ -318,67 +316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildDownloadPolicySection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.download, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '下载策略',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            SwitchListTile(
-              title: const Text('允许后台继续下载模型'),
-              subtitle: const Text('切换到其他应用时仍继续下载（可能增加电量与流量消耗）'),
-              value: _allowBackgroundDownload,
-              onChanged: (v) async {
-                setState(() => _allowBackgroundDownload = v);
-                await _saveDownloadPolicy();
-              },
-            ),
-            SwitchListTile(
-              title: const Text('仅在 Wi‑Fi 下下载模型'),
-              subtitle: const Text('移动网络时将等待 Wi‑Fi 再继续'),
-              value: _wifiOnlyDownload,
-              onChanged: (v) async {
-                setState(() => _wifiOnlyDownload = v);
-                await _saveDownloadPolicy();
-              },
-            ),
-            SwitchListTile(
-              title: const Text('低电量时自动暂停下载'),
-              subtitle: const Text('电量低于 15% 时自动暂停，充电或提升电量后可手动继续'),
-              value: _autoPauseLowBattery,
-              onChanged: (v) async {
-                setState(() => _autoPauseLowBattery = v);
-                await _saveDownloadPolicy();
-              },
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '说明：此策略即时生效；后台下载在部分系统上可能仍受系统限制。',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // 下载策略 UI 已移除
 
   /// 显示撤回同意对话框
   void _showRevokeDialog() {
