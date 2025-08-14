@@ -94,6 +94,49 @@ flutter build ios --release
 flutter build web
 ```
 
+## 🔑 本地运行时设置 Token（Hugging Face）
+
+项目已移除硬编码的 Hugging Face Token。若需要访问受限资源，请在运行/构建时通过 `--dart-define` 注入 `HF_ACCESS_TOKEN`。
+
+### 开发运行
+
+```bash
+# 直接注入
+flutter run --dart-define=HF_ACCESS_TOKEN=hf_xxx_your_token
+
+# 或使用环境变量（推荐，将 token 保存在 shell 配置中）
+export HF_ACCESS_TOKEN=hf_xxx_your_token
+flutter run --dart-define=HF_ACCESS_TOKEN=$HF_ACCESS_TOKEN
+```
+
+### 构建发布
+
+```bash
+# Android Release APK
+flutter build apk --release --dart-define=HF_ACCESS_TOKEN=$HF_ACCESS_TOKEN
+
+# Android App Bundle
+flutter build appbundle --release --dart-define=HF_ACCESS_TOKEN=$HF_ACCESS_TOKEN
+
+# iOS Release（需要在 macOS 且已配置签名）
+flutter build ios --release --dart-define=HF_ACCESS_TOKEN=$HF_ACCESS_TOKEN
+```
+
+### CI 中的用法（示例）
+
+在 CI 平台将 Token 存为机密变量，例如 `HF_ACCESS_TOKEN`，然后：
+
+```bash
+flutter build apk --release --dart-define=HF_ACCESS_TOKEN=$HF_ACCESS_TOKEN
+```
+
+### 注意事项
+
+- 不要将 Token 写入代码或提交到仓库。
+- `String.fromEnvironment('HF_ACCESS_TOKEN')` 在构建时会内嵌常量；生产环境不建议将敏感 Token 打进最终产物。
+  - 建议：仅在开发/内测阶段使用该方式；如需线上下载受限资源，请改为通过服务端代理或用户自行提供密钥。
+- 未提供 `HF_ACCESS_TOKEN` 时，代码会以匿名方式访问（可能受限）。
+
 ## 🏗️ Architecture
 
 ### Project Structure
