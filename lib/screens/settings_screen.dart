@@ -408,9 +408,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildMNNChatServiceSection() {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const MNNChatConfigScreen(),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -454,18 +460,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const MNNChatConfigScreen(),
+            const SizedBox(height: 8),
+            Text(
+              '点击卡片配置 MNN Chat 服务',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                ),
-                icon: const Icon(Icons.settings),
-                label: const Text('配置 MNN Chat 服务'),
-              ),
             ),
           ],
         ),
@@ -475,9 +475,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildCloudServiceSection() {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const CloudServiceConfigScreen(),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -515,18 +521,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const CloudServiceConfigScreen(),
+            const SizedBox(height: 8),
+            Text(
+              '点击卡片配置云端服务',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                ),
-                icon: const Icon(Icons.settings),
-                label: const Text('配置云端服务'),
-              ),
             ),
           ],
         ),
@@ -574,9 +574,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final isDownloaded = modelService.isModelDownloaded;
 
         return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+          child: InkWell(
+            onTap: () => Navigator.of(context).pushNamed('/embedded-model-manager'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
@@ -602,7 +604,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Icon(
@@ -618,25 +620,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      _getModelStatusText(status),
+                      '点击卡片管理 AI 模型 · ${_getModelStatusText(status)}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => Navigator.of(
-                      context,
-                    ).pushNamed('/embedded-model-manager'),
-                    icon: const Icon(Icons.settings),
-                    label: const Text('管理AI模型'),
-                  ),
-                ),
               ],
+              ),
             ),
-          ),
         );
       },
     );
