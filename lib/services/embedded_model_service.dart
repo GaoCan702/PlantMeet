@@ -80,12 +80,25 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
       await _loadModelInfo();
 
       _logger.i('Embedded model service initialized');
-    } catch (e) {
-      _logger.e('Failed to initialize embedded model service: $e');
+    } catch (e, stackTrace) {
+      String detailedError;
+      
+      if (e.toString().contains('capability')) {
+        detailedError = 'Device capability detection failed: ${e.toString()}. Please check device compatibility.';
+      } else if (e.toString().contains('isModelDownloaded')) {
+        detailedError = 'Model download check failed: ${e.toString()}. Storage access may be restricted.';
+      } else if (e.toString().contains('connectivity')) {
+        detailedError = 'Network connectivity check failed: ${e.toString()}. Network services unavailable.';
+      } else {
+        detailedError = 'Service initialization failed: ${e.toString()}';
+      }
+      
+      _logger.e('Failed to initialize embedded model service: $detailedError');
+      _logger.e('Stack trace: $stackTrace');
       _updateState(
         _state.copyWith(
           status: ModelStatus.error,
-          errorMessage: 'Initialization failed: $e',
+          errorMessage: detailedError,
         ),
       );
     }
@@ -134,11 +147,25 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
         _downloadStatus = '下载已暂停';
         notifyListeners();
       } else {
-        _logger.e('Failed to download model: $e');
+        String detailedError;
+        
+        if (e.toString().contains('network') || e.toString().contains('connection')) {
+          detailedError = 'Network error during download: ${e.toString()}. Please check internet connection.';
+        } else if (e.toString().contains('storage') || e.toString().contains('space')) {
+          detailedError = 'Storage error during download: ${e.toString()}. Check available storage space.';
+        } else if (e.toString().contains('permission')) {
+          detailedError = 'Permission error during download: ${e.toString()}. Storage access denied.';
+        } else if (e.toString().contains('timeout')) {
+          detailedError = 'Download timeout: ${e.toString()}. Server may be overloaded.';
+        } else {
+          detailedError = 'Download failed: ${e.toString()}';
+        }
+        
+        _logger.e('Failed to download model: $detailedError');
         _updateState(
           _state.copyWith(
             status: ModelStatus.error,
-            errorMessage: 'Download failed: $e',
+            errorMessage: detailedError,
           ),
         );
       }
@@ -163,12 +190,23 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
       } else {
         throw Exception('Downloaded model failed integrity check');
       }
-    } catch (e) {
-      _logger.e('Download completion failed: $e');
+    } catch (e, stackTrace) {
+      String detailedError;
+      
+      if (e.toString().contains('integrity')) {
+        detailedError = 'Model integrity check failed: ${e.toString()}. Downloaded file may be corrupted.';
+      } else if (e.toString().contains('_tryLoadModel')) {
+        detailedError = 'Model loading failed after download: ${e.toString()}. Model format may be incompatible.';
+      } else {
+        detailedError = 'Download verification failed: ${e.toString()}';
+      }
+      
+      _logger.e('Download completion failed: $detailedError');
+      _logger.e('Stack trace: $stackTrace');
       _updateState(
         _state.copyWith(
           status: ModelStatus.error,
-          errorMessage: 'Download verification failed: $e',
+          errorMessage: detailedError,
         ),
       );
     }
@@ -186,12 +224,25 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
       } else {
         throw Exception('Model failed to initialize');
       }
-    } catch (e) {
-      _logger.e('Failed to load model: $e');
+    } catch (e, stackTrace) {
+      String detailedError;
+      
+      if (e.toString().contains('initializeModel')) {
+        detailedError = 'Model initialization failed: ${e.toString()}. Check device memory and model compatibility.';
+      } else if (e.toString().contains('isModelReady')) {
+        detailedError = 'Model readiness check failed: ${e.toString()}. Model loaded but not responding.';
+      } else if (e.toString().contains('Model failed to initialize')) {
+        detailedError = 'Model failed to initialize: This could be due to insufficient memory, corrupted model file, or device incompatibility.';
+      } else {
+        detailedError = 'Model loading failed: ${e.toString()}';
+      }
+      
+      _logger.e('Failed to load model: $detailedError');
+      _logger.e('Stack trace: $stackTrace');
       _updateState(
         _state.copyWith(
           status: ModelStatus.error,
-          errorMessage: 'Failed to load model: $e',
+          errorMessage: detailedError,
         ),
       );
     }
@@ -275,10 +326,58 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
       await ensureModelLoaded();
     }
     if (_state.status != ModelStatus.ready) {
-      throw Exception('Model is not ready. Current status: ${_state.status}');
+      throw Exception('模型未就绪，当前状态: ${_getStatusDescription(_state.status)}。请返回模型管理页面检查模型状态。');
     }
 
     return _inferenceService.chat(prompt: prompt, imageFile: imageFile);
+  }
+
+  /// 流式聊天方法 - 支持实时响应
+  Stream<String> chatStream({
+    required String prompt,
+    File? imageFile,
+  }) async* {
+    try {
+      // 如果模型未加载，先尝试加载
+      if (_state.status == ModelStatus.downloaded) {
+        yield '🔄 正在初始化模型，请稍候...';
+        await ensureModelLoaded();
+        yield '\n\n';
+      }
+      
+      if (_state.status != ModelStatus.ready) {
+        throw Exception('模型未就绪，当前状态: ${_getStatusDescription(_state.status)}。请返回模型管理页面检查模型状态。');
+      }
+
+      yield* _inferenceService.chatStream(prompt: prompt, imageFile: imageFile);
+    } catch (e) {
+      // 如果是模型初始化相关错误，提供更友好的提示
+      if (e.toString().contains('initializeModel')) {
+        throw Exception('模型初始化失败。这可能是由于设备内存不足或模型文件损坏。建议重新下载模型或重启应用。');
+      } else if (e.toString().contains('Model file not found')) {
+        throw Exception('模型文件丢失。请返回模型管理页面重新下载模型。');
+      }
+      rethrow;
+    }
+  }
+  
+  String _getStatusDescription(ModelStatus status) {
+    switch (status) {
+      case ModelStatus.notDownloaded:
+        return '未下载';
+      case ModelStatus.downloading:
+        return '下载中';
+      case ModelStatus.downloaded:
+        return '已下载，等待初始化';
+      case ModelStatus.loading:
+        return '加载中';
+      case ModelStatus.ready:
+        return '就绪';
+      case ModelStatus.error:
+        return '错误';
+      case ModelStatus.updating:
+        return '更新中';
+    }
   }
 
   Future<void> deleteModel() async {
@@ -318,44 +417,8 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
       if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
         _maybePauseForBackground();
       } else if (state == AppLifecycleState.resumed) {
-        // 回到前台自动续传
-        scheduleMicrotask(() async {
-          try {
-            // 若仅 Wi‑Fi 下载，但当前非 Wi‑Fi，直接暂停并提示
-            if (await _isWifiRequiredAndNotOnWifi()) {
-              _downloadStatus = '等待 Wi‑Fi 连接以继续下载';
-              notifyListeners();
-              _scheduleRetry();
-              return;
-            }
-            // 低电量自动暂停
-            if (await _shouldAutoPauseForBattery()) {
-              _downloadStatus = '电量较低，已暂停下载';
-              notifyListeners();
-              _scheduleRetry();
-              return;
-            }
-            await _downloader.downloadModel(
-              modelId: _modelId,
-              onProgress: (p) => _updateState(_state.copyWith(downloadProgress: p)),
-              onStatusUpdate: (s) {
-                _downloadStatus = s;
-                notifyListeners();
-              },
-            );
-            await _onDownloadCompleted();
-            _resetRetry();
-          } catch (e) {
-            if (e is! DownloadPausedException) {
-              _logger.e('Resume download failed: $e');
-              _updateState(
-                _state.copyWith(status: ModelStatus.error, errorMessage: '$e'),
-              );
-            } else {
-              _scheduleRetry();
-            }
-          }
-        });
+        // 回到前台尝试续传
+        _tryResumeDownload();
       }
     }
   }
@@ -407,13 +470,62 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// 尝试恢复下载（从前台/网络变化等触发）
+  void _tryResumeDownload() {
+    if (_state.status != ModelStatus.downloading) return;
+    
+    scheduleMicrotask(() async {
+      try {
+        // 若仅 Wi‑Fi 下载，但当前非 Wi‑Fi，直接暂停并提示
+        if (await _isWifiRequiredAndNotOnWifi()) {
+          _downloadStatus = '等待 Wi‑Fi 连接以继续下载';
+          notifyListeners();
+          _scheduleRetry();
+          return;
+        }
+        // 低电量自动暂停
+        if (await _shouldAutoPauseForBattery()) {
+          _downloadStatus = '电量较低，已暂停下载';
+          notifyListeners();
+          _scheduleRetry();
+          return;
+        }
+        
+        _logger.i('Attempting to resume download...');
+        await _downloader.downloadModel(
+          modelId: _modelId,
+          onProgress: (p) => _updateState(_state.copyWith(downloadProgress: p)),
+          onStatusUpdate: (s) {
+            _downloadStatus = s;
+            notifyListeners();
+          },
+        );
+        await _onDownloadCompleted();
+        _resetRetry();
+      } catch (e) {
+        if (e is DownloadPausedException) {
+          _logger.i('Download paused during resume attempt');
+          _downloadStatus = '下载已暂停';
+          notifyListeners();
+          _scheduleRetry();
+        } else {
+          _logger.w('Resume download failed: $e');
+          // 不立即设置为错误状态，而是调度重试
+          _downloadStatus = '续传失败，将重试: ${e.toString().split('\n').first}';
+          notifyListeners();
+          _scheduleRetry();
+        }
+      }
+    });
+  }
+
   void _scheduleRetry({bool immediate = false}) {
     _retryTimer?.cancel();
     final nextDelay = immediate ? Duration.zero : Duration(seconds: math.min(60, (1 << _retryAttempt)));
     _retryAttempt = math.min(_retryAttempt + 1, 6); // 最大 64s 上限，最终 clamp 为 60s
     _retryTimer = Timer(nextDelay, () {
       if (_state.status == ModelStatus.downloading) {
-        didChangeAppLifecycleState(AppLifecycleState.resumed);
+        _tryResumeDownload();
       }
     });
   }

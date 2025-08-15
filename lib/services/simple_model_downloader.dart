@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:path/path.dart' as path;
@@ -16,9 +17,26 @@ class DownloadPausedException implements Exception {
 
 /// 简化的模型下载器 - 参考 flutter_gemma 的最佳实践
 class SimpleModelDownloader {
-  static const String _modelUrl =
+  // 支持本地服务器和远程HuggingFace，优先使用本地服务器（开发调试）
+  static const String _localModelServer = String.fromEnvironment(
+    'LOCAL_MODEL_SERVER',
+    defaultValue: '',
+  );
+  static const String _defaultModelUrl =
       'https://huggingface.co/google/gemma-3n-E4B-it-litert-preview/resolve/main/gemma-3n-E4B-it-int4.task';
   static const String _fileName = 'gemma-3n-E4B-it-int4.task';
+  
+  // 动态获取模型URL
+  static String get _modelUrl {
+    if (_localModelServer.isNotEmpty) {
+      // 本地服务器模式（开发调试）
+      return '$_localModelServer/$_fileName';
+    } else {
+      // HuggingFace模式（生产环境）
+      return _defaultModelUrl;
+    }
+  }
+  
   // 通过 --dart-define=HF_ACCESS_TOKEN=... 注入（无 Token 时将匿名访问）
   static const String _envAccessToken = String.fromEnvironment(
     'HF_ACCESS_TOKEN',
@@ -60,6 +78,31 @@ class SimpleModelDownloader {
     }
 
     try {
+      // 首先检查是否有预装的 assets 模型
+      final assetPath = 'assets/models/$_fileName';
+      try {
+        final assetData = await rootBundle.load(assetPath);
+        if (assetData.lengthInBytes > 0) {
+          _logger.i('✅ 检测到 assets 中的预装模型: $assetPath');
+          
+          // 将 assets 模型复制到本地存储
+          final localPath = await getModelFilePath(modelId);
+          final localFile = File(localPath);
+          
+          if (!localFile.existsSync()) {
+            await _copyAssetToLocal(assetPath, localPath);
+            // 标记为已下载
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(_prefsModelKey, _fileName);
+            _logger.i('✅ Assets 模型已复制到本地: $localPath');
+          }
+          
+          return true;
+        }
+      } catch (e) {
+        _logger.d('未找到 assets 模型，继续检查本地文件: $e');
+      }
+
       // 检查 SharedPreferences 中的记录
       final prefs = await SharedPreferences.getInstance();
       final savedFileName = prefs.getString(_prefsModelKey);
@@ -106,7 +149,8 @@ class SimpleModelDownloader {
       final headers = <String, String>{
         'User-Agent': 'PlantMeet/1.0 Flutter App',
       };
-      if (_envAccessToken.isNotEmpty) {
+      // 仅在使用HuggingFace时添加Authorization头
+      if (_localModelServer.isEmpty && _envAccessToken.isNotEmpty) {
         headers['Authorization'] = 'Bearer $_envAccessToken';
       }
 
@@ -166,7 +210,8 @@ class SimpleModelDownloader {
       // 创建 HTTP 请求
       final request = http.Request('GET', Uri.parse(_modelUrl));
       request.headers.addAll({'User-Agent': 'PlantMeet/1.0 Flutter App'});
-      if (_envAccessToken.isNotEmpty) {
+      // 仅在使用HuggingFace时添加Authorization头
+      if (_localModelServer.isEmpty && _envAccessToken.isNotEmpty) {
         request.headers['Authorization'] = 'Bearer $_envAccessToken';
       }
 
@@ -330,5 +375,28 @@ class SimpleModelDownloader {
       'file_path': await getModelFilePath(modelId),
       'model_url': _modelUrl,
     };
+  }
+
+  /// 从 assets 复制模型文件到本地存储
+  Future<void> _copyAssetToLocal(String assetPath, String localPath) async {
+    try {
+      _logger.i('正在从 assets 复制模型: $assetPath -> $localPath');
+      
+      // 确保目录存在
+      final localFile = File(localPath);
+      await localFile.parent.create(recursive: true);
+      
+      // 读取 asset 数据
+      final assetData = await rootBundle.load(assetPath);
+      final bytes = assetData.buffer.asUint8List();
+      
+      // 写入本地文件
+      await localFile.writeAsBytes(bytes);
+      
+      _logger.i('✅ Assets 模型复制完成，大小: ${(bytes.length / 1024 / 1024).toStringAsFixed(1)} MB');
+    } catch (e) {
+      _logger.e('从 assets 复制模型失败: $e');
+      rethrow;
+    }
   }
 }

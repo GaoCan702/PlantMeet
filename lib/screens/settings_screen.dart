@@ -417,57 +417,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.computer, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'MNN Chat服务',
-                    style: Theme.of(context).textTheme.titleLarge,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.computer, color: Theme.of(context).primaryColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'MNN Chat服务',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
-                ),
-                _buildServiceStatusChip(_settings.enableLocalRecognition),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '使用本地MNN Chat API进行隐私安全的植物识别',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  _buildServiceStatusChip(_settings.enableLocalRecognition),
+                ],
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(
-                  _settings.enableLocalRecognition
+              const SizedBox(height: 12),
+              Text(
+                '使用本地MNN Chat API进行隐私安全的植物识别',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(
+                    _settings.enableLocalRecognition
                       ? Icons.check_circle
                       : Icons.radio_button_unchecked,
-                  size: 16,
-                  color: _settings.enableLocalRecognition
-                      ? Colors.green
-                      : Colors.grey,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _settings.enableLocalRecognition
-                      ? '已启用，可进行本地识别'
-                      : '未启用，点击下方按钮进行配置',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '点击卡片配置 MNN Chat 服务',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    size: 16,
+                    color: _settings.enableLocalRecognition
+                        ? Colors.green
+                        : Colors.grey,
                   ),
-            ),
-          ],
+                  const SizedBox(width: 8),
+                  Text(
+                    _settings.enableLocalRecognition
+                        ? '已启用，可进行本地识别'
+                        : '未启用，点击下方按钮进行配置',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '点击卡片配置 MNN Chat 服务',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -484,31 +485,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.cloud, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '云端服务',
-                    style: Theme.of(context).textTheme.titleLarge,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.cloud, color: Theme.of(context).primaryColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '云端服务',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
-                ),
-                _buildServiceStatusChip(false), // 临时设为false，后续可以添加专门的云端开关
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '连接云端API进行高精度植物识别，支持多种服务商',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  _buildServiceStatusChip(false), // 临时设为false，后续可以添加专门的云端开关
+                ],
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
+              const SizedBox(height: 12),
+              Text(
+                '连接云端API进行高精度植物识别，支持多种服务商',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
                 Icon(
                   Icons.radio_button_unchecked,
                   size: 16,
@@ -528,7 +529,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -579,55 +581,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.psychology,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '应用内AI模型',
-                        style: Theme.of(context).textTheme.titleLarge,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.psychology,
+                        color: Theme.of(context).primaryColor,
                       ),
-                    ),
-                    _buildModelStatusChip(status),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  '下载Gemma 3n E4B LiteRT模型到应用内，实现完全离线的植物识别',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '应用内AI模型',
+                          style: Theme.of(context).textTheme.titleLarge,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: _buildModelStatusChip(status),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      isReady
-                          ? Icons.check_circle
-                          : (isDownloaded
-                                ? Icons.pending
-                                : Icons.cloud_download),
-                      size: 16,
-                      color: isReady
-                          ? Colors.green
-                          : (isDownloaded ? Colors.orange : Colors.grey),
+                  const SizedBox(height: 12),
+                  Text(
+                    '下载Gemma 3n E4B LiteRT模型到应用内，实现完全离线的植物识别',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '点击卡片管理 AI 模型 · ${_getModelStatusText(status)}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        isReady
+                            ? Icons.check_circle
+                            : (isDownloaded
+                                  ? Icons.pending
+                                  : Icons.cloud_download),
+                        size: 16,
+                        color: isReady
+                            ? Colors.green
+                            : (isDownloaded ? Colors.orange : Colors.grey),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '点击卡片管理 AI 模型 · ${_getModelStatusText(status)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
+          ),
         );
       },
     );

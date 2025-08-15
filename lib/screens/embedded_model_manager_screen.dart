@@ -48,6 +48,8 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
                     _buildDownloadPromptSection(context, modelService),
                   if (modelService.isModelReady)
                     _buildModelReadySection(context, modelService),
+                  if (modelService.isModelDownloaded && !modelService.hasError)
+                    _buildChatTestSection(context, modelService),
                   if (modelService.hasError)
                     _buildErrorSection(context, modelService),
                   const SizedBox(height: 24),
@@ -367,6 +369,7 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
+            // 主要功能按钮
             Row(
               children: [
                 Expanded(
@@ -387,8 +390,86 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            _buildLocalChatTester(context, modelService),
+            
+            // Chat测试卡片
+            _buildChatTestCard(context, modelService),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Chat测试区域 - 独立显示，不依赖模型ready状态
+  Widget _buildChatTestSection(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        _buildChatTestCard(context, modelService),
+      ],
+    );
+  }
+
+  /// Chat测试功能卡片 - 跳转到专门的Chat页面
+  Widget _buildChatTestCard(
+    BuildContext context,
+    EmbeddedModelService modelService,
+  ) {
+    return Card(
+      color: Colors.blue.shade50,
+      child: InkWell(
+        onTap: () => Navigator.of(context).pushNamed('/model-chat-test'),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.chat_bubble_outline,
+                  color: Colors.blue,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '多模态聊天测试',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '与AI模型进行文本和图片的实时对话测试',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.blue.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.blue.shade400,
+                size: 16,
+              ),
+            ],
+          ),
         ),
       ),
     );

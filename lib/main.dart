@@ -10,6 +10,7 @@ import 'screens/error_demo_screen.dart';
 import 'screens/embedded_model_manager_screen.dart';
 import 'screens/mnn_chat_config_screen.dart';
 import 'screens/cloud_service_config_screen.dart';
+import 'screens/model_chat_test_screen.dart';
 import 'services/app_state.dart';
 import 'services/database_service.dart';
 import 'services/database.dart';
@@ -118,6 +119,7 @@ class PlantMeetApp extends StatelessWidget {
             const EmbeddedModelManagerScreen(),
         '/mnn-chat-config': (context) => const MNNChatConfigScreen(),
         '/cloud-service-config': (context) => const CloudServiceConfigScreen(),
+        '/model-chat-test': (context) => const ModelChatTestScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/plant-detail') {
