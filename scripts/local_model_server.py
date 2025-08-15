@@ -29,11 +29,6 @@ class ModelFileHandler(SimpleHTTPRequestHandler):
     
     def do_GET(self):
         """处理GET请求"""
-        # 添加CORS头
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Range, Authorization, User-Agent')
-        
         # 仅处理模型文件请求
         if self.path.startswith('/gemma-3n-E4B-it-int4.task'):
             model_file = self.model_dir / 'gemma-3n-E4B-it-int4.task'
@@ -95,6 +90,10 @@ class ModelFileHandler(SimpleHTTPRequestHandler):
             self.send_header('Content-Type', 'application/octet-stream')
             self.send_header('Accept-Ranges', 'bytes')
             self.send_header('Cache-Control', 'public, max-age=3600')
+            # 添加CORS头
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Range, Authorization, User-Agent')
             self.end_headers()
             
             # 发送文件内容
