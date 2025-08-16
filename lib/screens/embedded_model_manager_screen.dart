@@ -389,10 +389,6 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            
-            // Chat测试卡片
-            _buildChatTestCard(context, modelService),
           ],
         ),
       ),
