@@ -15,6 +15,7 @@ import os
 import sys
 import argparse
 import socket
+import subprocess
 from pathlib import Path
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import threading
@@ -132,6 +133,23 @@ class ModelFileHandler(SimpleHTTPRequestHandler):
         timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
         print(f"[{timestamp}] {client_ip} - {format % args}")
 
+def kill_port_process(port):
+    """杀掉占用指定端口的进程"""
+    try:
+        # 查找占用端口的进程
+        result = subprocess.run(['lsof', '-ti', f':{port}'], 
+                              capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            pids = result.stdout.strip().split('\n')
+            for pid in pids:
+                if pid:
+                    print(f"🔥 正在终止占用端口 {port} 的进程 PID: {pid}")
+                    subprocess.run(['kill', '-9', pid], capture_output=True)
+            return True
+    except Exception as e:
+        print(f"清理端口 {port} 时出错: {e}")
+    return False
+
 def get_local_ip():
     """获取本机IP地址"""
     try:
@@ -165,7 +183,7 @@ def check_model_file(model_dir):
 
 def main():
     parser = argparse.ArgumentParser(description='本地模型文件服务器')
-    parser.add_argument('--port', type=int, default=8000, help='服务器端口 (默认: 8000)')
+    parser.add_argument('--port', type=int, default=8001, help='服务器端口 (默认: 8001)')
     parser.add_argument('--host', default='0.0.0.0', help='绑定主机 (默认: 0.0.0.0)')
     args = parser.parse_args()
     
@@ -181,6 +199,12 @@ def main():
     # 检查模型文件
     if not check_model_file(model_dir):
         sys.exit(1)
+    
+    # 如果端口被占用，自动清理
+    print(f"🔍 检查端口 {args.port} 是否被占用...")
+    if kill_port_process(args.port):
+        print(f"✅ 端口 {args.port} 已清理")
+        time.sleep(1)  # 等待进程完全退出
     
     # 创建服务器
     def handler_factory(*args, **kwargs):
