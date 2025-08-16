@@ -26,6 +26,21 @@ PlantMeet (遇见植物) is a "small and beautiful" plant identification app des
 - `flutter analyze` - Run static analysis with flutter_lints
 - `flutter format .` - Format code according to Dart style guide
 
+### Development Automation (Debug Mode)
+- `./scripts/dev_deploy.sh` - 一键开发部署：启动文件服务器 + 自动获取IP + 编译 + 安装到手机
+- `./scripts/stop_server.sh` - 停止本地模型文件服务器
+- `python3 scripts/local_model_server.py` - 手动启动本地模型文件服务器（默认8001端口）
+
+#### 开发流程说明
+在debug阶段，推荐使用 `./scripts/dev_deploy.sh` 实现一键部署：
+1. 自动清理旧的服务器进程
+2. 启动本地模型文件服务器（端口8001）
+3. 自动检测本机IP地址
+4. 使用正确的LOCAL_MODEL_SERVER地址编译应用
+5. 自动安装到已连接的Android设备
+
+这相当于Flutter版本的npm scripts，解决了IP地址变化和手动部署的问题。
+
 ## Architecture and Key Components
 
 ### Core Application Structure
