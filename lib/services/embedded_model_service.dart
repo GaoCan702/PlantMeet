@@ -568,6 +568,18 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// 恢复下载（用户主动点击继续按钮）
+  Future<void> resumeDownload() async {
+    if (_state.status == ModelStatus.downloading) {
+      _logger.i('User requested to resume download');
+      _downloadStatus = '正在恢复下载...';
+      notifyListeners();
+      
+      // 直接调用恢复下载逻辑
+      _tryResumeDownload();
+    }
+  }
+
   Future<String> getCompatibilityReport() async {
     if (_state.modelInfo == null) {
       await _loadModelInfo();
@@ -642,6 +654,16 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
   bool get hasError => _state.status == ModelStatus.error;
   String? get errorMessage => _state.errorMessage;
   double get downloadProgress => _state.downloadProgress;
+  
+  /// 判断下载是否处于暂停状态
+  bool get isDownloadPaused => isDownloading && (
+    _downloadStatus.contains('已暂停') || 
+    _downloadStatus.contains('等待') ||
+    _downloadStatus.contains('电量较低')
+  );
+  
+  /// 判断下载是否正在进行中（非暂停状态）
+  bool get isActivelyDownloading => isDownloading && !isDownloadPaused;
   ModelInfo? get modelInfo => _state.modelInfo;
   DeviceCapability? get deviceCapability => _state.capability;
 

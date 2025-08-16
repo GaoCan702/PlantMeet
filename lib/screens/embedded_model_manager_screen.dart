@@ -240,10 +240,9 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
           children: [
             Expanded(
               child: FilledButton.icon(
-                onPressed: () {
-                  // 继续下载（忽略一次 Wi‑Fi/电量限制）
-                  modelService.didChangeAppLifecycleState(AppLifecycleState.resumed);
-                },
+                onPressed: modelService.isDownloadPaused 
+                  ? () => modelService.resumeDownload()
+                  : null, // 禁用按钮当下载正在进行中
                 icon: const Icon(Icons.play_arrow),
                 label: const Text('继续'),
               ),
@@ -251,7 +250,9 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => modelService.pauseDownload(),
+                onPressed: modelService.isActivelyDownloading 
+                  ? () => modelService.pauseDownload()
+                  : null, // 禁用按钮当下载已暂停或未在下载
                 icon: const Icon(Icons.pause),
                 label: const Text('暂停'),
               ),
@@ -259,7 +260,9 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => modelService.cancelDownload(),
+                onPressed: modelService.isDownloading 
+                  ? () => modelService.cancelDownload()
+                  : null, // 只在下载状态时允许取消
                 icon: const Icon(Icons.stop),
                 label: const Text('取消'),
               ),
