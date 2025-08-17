@@ -185,8 +185,8 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
           ),
         );
 
-        // Try to load the model immediately
-        await _tryLoadModel();
+        // Model downloaded but not loaded - will load on demand
+        _logger.i('Model downloaded successfully, ready for on-demand loading');
       } else {
         throw Exception('Downloaded model failed integrity check');
       }
@@ -195,8 +195,6 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
       
       if (e.toString().contains('integrity')) {
         detailedError = 'Model integrity check failed: ${e.toString()}. Downloaded file may be corrupted.';
-      } else if (e.toString().contains('_tryLoadModel')) {
-        detailedError = 'Model loading failed after download: ${e.toString()}. Model format may be incompatible.';
       } else {
         detailedError = 'Download verification failed: ${e.toString()}';
       }
@@ -368,7 +366,7 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
       case ModelStatus.downloading:
         return '下载中';
       case ModelStatus.downloaded:
-        return '已下载，等待初始化';
+        return '已下载，使用时自动加载';
       case ModelStatus.loading:
         return '加载中';
       case ModelStatus.ready:
