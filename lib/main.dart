@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'screens/home_screen.dart';
+import 'screens/home_screen_v2.dart';
 import 'screens/camera_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/plant_detail_screen.dart';
+import 'screens/plant_detail_screen_v2.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/error_demo_screen.dart';
@@ -11,6 +11,7 @@ import 'screens/embedded_model_manager_screen.dart';
 import 'screens/mnn_chat_config_screen.dart';
 import 'screens/cloud_service_config_screen.dart';
 import 'screens/model_chat_test_screen.dart';
+import 'screens/test_plant_detail_screen.dart';
 import 'services/app_state.dart';
 import 'services/database_service.dart';
 import 'services/database.dart';
@@ -109,7 +110,7 @@ class PlantMeetApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       initialRoute: hasSeenOnboarding ? '/home' : '/onboarding',
       routes: {
-        '/home': (context) => const HomeScreen(),
+        '/home': (context) => const HomeScreenV2(),
         '/camera': (context) => const CameraScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/gallery': (context) => const GalleryScreen(),
@@ -120,12 +121,13 @@ class PlantMeetApp extends StatelessWidget {
         '/mnn-chat-config': (context) => const MNNChatConfigScreen(),
         '/cloud-service-config': (context) => const CloudServiceConfigScreen(),
         '/model-chat-test': (context) => const ModelChatTestScreen(),
+        '/test-plant-detail': (context) => const TestPlantDetailScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/plant-detail') {
           final speciesId = settings.arguments as String;
           return MaterialPageRoute(
-            builder: (context) => PlantDetailScreen(speciesId: speciesId),
+            builder: (context) => PlantDetailScreenV2(speciesId: speciesId),
           );
         }
         return null;

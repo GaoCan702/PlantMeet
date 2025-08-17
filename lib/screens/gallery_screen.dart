@@ -33,10 +33,13 @@ class _GalleryScreenState extends State<GalleryScreen> {
           // 构建遇见映射
           final encountersMap = <String, List<PlantEncounter>>{};
           for (final encounter in encounters) {
-            if (!encountersMap.containsKey(encounter.speciesId)) {
-              encountersMap[encounter.speciesId] = [];
+            // 只处理已识别的植物（有speciesId的）
+            if (encounter.speciesId != null) {
+              if (!encountersMap.containsKey(encounter.speciesId)) {
+                encountersMap[encounter.speciesId!] = [];
+              }
+              encountersMap[encounter.speciesId!]!.add(encounter);
             }
-            encountersMap[encounter.speciesId]!.add(encounter);
           }
 
           return Padding(

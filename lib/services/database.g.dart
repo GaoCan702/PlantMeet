@@ -562,9 +562,9 @@ class $PlantEncounterTableTable extends PlantEncounterTable
   late final GeneratedColumn<String> speciesId = GeneratedColumn<String>(
     'species_id',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _encounterDateMeta = const VerificationMeta(
     'encounterDate',
@@ -653,6 +653,32 @@ class $PlantEncounterTableTable extends PlantEncounterTable
       ).withConverter<RecognitionMethod>(
         $PlantEncounterTableTable.$convertermethod,
       );
+  static const VerificationMeta _userDefinedNameMeta = const VerificationMeta(
+    'userDefinedName',
+  );
+  @override
+  late final GeneratedColumn<String> userDefinedName = GeneratedColumn<String>(
+    'user_defined_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isIdentifiedMeta = const VerificationMeta(
+    'isIdentified',
+  );
+  @override
+  late final GeneratedColumn<bool> isIdentified = GeneratedColumn<bool>(
+    'is_identified',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_identified" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -687,6 +713,8 @@ class $PlantEncounterTableTable extends PlantEncounterTable
     notes,
     source,
     method,
+    userDefinedName,
+    isIdentified,
     createdAt,
     updatedAt,
   ];
@@ -712,8 +740,6 @@ class $PlantEncounterTableTable extends PlantEncounterTable
         _speciesIdMeta,
         speciesId.isAcceptableOrUnknown(data['species_id']!, _speciesIdMeta),
       );
-    } else if (isInserting) {
-      context.missing(_speciesIdMeta);
     }
     if (data.containsKey('encounter_date')) {
       context.handle(
@@ -758,6 +784,24 @@ class $PlantEncounterTableTable extends PlantEncounterTable
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('user_defined_name')) {
+      context.handle(
+        _userDefinedNameMeta,
+        userDefinedName.isAcceptableOrUnknown(
+          data['user_defined_name']!,
+          _userDefinedNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_identified')) {
+      context.handle(
+        _isIdentifiedMeta,
+        isIdentified.isAcceptableOrUnknown(
+          data['is_identified']!,
+          _isIdentifiedMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -793,7 +837,7 @@ class $PlantEncounterTableTable extends PlantEncounterTable
       speciesId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}species_id'],
-      )!,
+      ),
       encounterDate: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}encounter_date'],
@@ -830,6 +874,14 @@ class $PlantEncounterTableTable extends PlantEncounterTable
           data['${effectivePrefix}method'],
         )!,
       ),
+      userDefinedName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_defined_name'],
+      ),
+      isIdentified: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_identified'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -855,7 +907,7 @@ class $PlantEncounterTableTable extends PlantEncounterTable
 class PlantEncounterTableData extends DataClass
     implements Insertable<PlantEncounterTableData> {
   final String id;
-  final String speciesId;
+  final String? speciesId;
   final DateTime encounterDate;
   final String? location;
   final double? latitude;
@@ -864,11 +916,13 @@ class PlantEncounterTableData extends DataClass
   final String? notes;
   final RecognitionSource source;
   final RecognitionMethod method;
+  final String? userDefinedName;
+  final bool isIdentified;
   final DateTime createdAt;
   final DateTime updatedAt;
   const PlantEncounterTableData({
     required this.id,
-    required this.speciesId,
+    this.speciesId,
     required this.encounterDate,
     this.location,
     this.latitude,
@@ -877,6 +931,8 @@ class PlantEncounterTableData extends DataClass
     this.notes,
     required this.source,
     required this.method,
+    this.userDefinedName,
+    required this.isIdentified,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -884,7 +940,9 @@ class PlantEncounterTableData extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['species_id'] = Variable<String>(speciesId);
+    if (!nullToAbsent || speciesId != null) {
+      map['species_id'] = Variable<String>(speciesId);
+    }
     map['encounter_date'] = Variable<DateTime>(encounterDate);
     if (!nullToAbsent || location != null) {
       map['location'] = Variable<String>(location);
@@ -909,6 +967,10 @@ class PlantEncounterTableData extends DataClass
         $PlantEncounterTableTable.$convertermethod.toSql(method),
       );
     }
+    if (!nullToAbsent || userDefinedName != null) {
+      map['user_defined_name'] = Variable<String>(userDefinedName);
+    }
+    map['is_identified'] = Variable<bool>(isIdentified);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -917,7 +979,9 @@ class PlantEncounterTableData extends DataClass
   PlantEncounterTableCompanion toCompanion(bool nullToAbsent) {
     return PlantEncounterTableCompanion(
       id: Value(id),
-      speciesId: Value(speciesId),
+      speciesId: speciesId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(speciesId),
       encounterDate: Value(encounterDate),
       location: location == null && nullToAbsent
           ? const Value.absent()
@@ -934,6 +998,10 @@ class PlantEncounterTableData extends DataClass
           : Value(notes),
       source: Value(source),
       method: Value(method),
+      userDefinedName: userDefinedName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(userDefinedName),
+      isIdentified: Value(isIdentified),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -946,7 +1014,7 @@ class PlantEncounterTableData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return PlantEncounterTableData(
       id: serializer.fromJson<String>(json['id']),
-      speciesId: serializer.fromJson<String>(json['speciesId']),
+      speciesId: serializer.fromJson<String?>(json['speciesId']),
       encounterDate: serializer.fromJson<DateTime>(json['encounterDate']),
       location: serializer.fromJson<String?>(json['location']),
       latitude: serializer.fromJson<double?>(json['latitude']),
@@ -959,6 +1027,8 @@ class PlantEncounterTableData extends DataClass
       method: $PlantEncounterTableTable.$convertermethod.fromJson(
         serializer.fromJson<int>(json['method']),
       ),
+      userDefinedName: serializer.fromJson<String?>(json['userDefinedName']),
+      isIdentified: serializer.fromJson<bool>(json['isIdentified']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -968,7 +1038,7 @@ class PlantEncounterTableData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'speciesId': serializer.toJson<String>(speciesId),
+      'speciesId': serializer.toJson<String?>(speciesId),
       'encounterDate': serializer.toJson<DateTime>(encounterDate),
       'location': serializer.toJson<String?>(location),
       'latitude': serializer.toJson<double?>(latitude),
@@ -981,6 +1051,8 @@ class PlantEncounterTableData extends DataClass
       'method': serializer.toJson<int>(
         $PlantEncounterTableTable.$convertermethod.toJson(method),
       ),
+      'userDefinedName': serializer.toJson<String?>(userDefinedName),
+      'isIdentified': serializer.toJson<bool>(isIdentified),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -988,7 +1060,7 @@ class PlantEncounterTableData extends DataClass
 
   PlantEncounterTableData copyWith({
     String? id,
-    String? speciesId,
+    Value<String?> speciesId = const Value.absent(),
     DateTime? encounterDate,
     Value<String?> location = const Value.absent(),
     Value<double?> latitude = const Value.absent(),
@@ -997,11 +1069,13 @@ class PlantEncounterTableData extends DataClass
     Value<String?> notes = const Value.absent(),
     RecognitionSource? source,
     RecognitionMethod? method,
+    Value<String?> userDefinedName = const Value.absent(),
+    bool? isIdentified,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => PlantEncounterTableData(
     id: id ?? this.id,
-    speciesId: speciesId ?? this.speciesId,
+    speciesId: speciesId.present ? speciesId.value : this.speciesId,
     encounterDate: encounterDate ?? this.encounterDate,
     location: location.present ? location.value : this.location,
     latitude: latitude.present ? latitude.value : this.latitude,
@@ -1010,6 +1084,10 @@ class PlantEncounterTableData extends DataClass
     notes: notes.present ? notes.value : this.notes,
     source: source ?? this.source,
     method: method ?? this.method,
+    userDefinedName: userDefinedName.present
+        ? userDefinedName.value
+        : this.userDefinedName,
+    isIdentified: isIdentified ?? this.isIdentified,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -1029,6 +1107,12 @@ class PlantEncounterTableData extends DataClass
       notes: data.notes.present ? data.notes.value : this.notes,
       source: data.source.present ? data.source.value : this.source,
       method: data.method.present ? data.method.value : this.method,
+      userDefinedName: data.userDefinedName.present
+          ? data.userDefinedName.value
+          : this.userDefinedName,
+      isIdentified: data.isIdentified.present
+          ? data.isIdentified.value
+          : this.isIdentified,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -1047,6 +1131,8 @@ class PlantEncounterTableData extends DataClass
           ..write('notes: $notes, ')
           ..write('source: $source, ')
           ..write('method: $method, ')
+          ..write('userDefinedName: $userDefinedName, ')
+          ..write('isIdentified: $isIdentified, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1065,6 +1151,8 @@ class PlantEncounterTableData extends DataClass
     notes,
     source,
     method,
+    userDefinedName,
+    isIdentified,
     createdAt,
     updatedAt,
   );
@@ -1082,6 +1170,8 @@ class PlantEncounterTableData extends DataClass
           other.notes == this.notes &&
           other.source == this.source &&
           other.method == this.method &&
+          other.userDefinedName == this.userDefinedName &&
+          other.isIdentified == this.isIdentified &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -1089,7 +1179,7 @@ class PlantEncounterTableData extends DataClass
 class PlantEncounterTableCompanion
     extends UpdateCompanion<PlantEncounterTableData> {
   final Value<String> id;
-  final Value<String> speciesId;
+  final Value<String?> speciesId;
   final Value<DateTime> encounterDate;
   final Value<String?> location;
   final Value<double?> latitude;
@@ -1098,6 +1188,8 @@ class PlantEncounterTableCompanion
   final Value<String?> notes;
   final Value<RecognitionSource> source;
   final Value<RecognitionMethod> method;
+  final Value<String?> userDefinedName;
+  final Value<bool> isIdentified;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -1112,13 +1204,15 @@ class PlantEncounterTableCompanion
     this.notes = const Value.absent(),
     this.source = const Value.absent(),
     this.method = const Value.absent(),
+    this.userDefinedName = const Value.absent(),
+    this.isIdentified = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PlantEncounterTableCompanion.insert({
     required String id,
-    required String speciesId,
+    this.speciesId = const Value.absent(),
     required DateTime encounterDate,
     this.location = const Value.absent(),
     this.latitude = const Value.absent(),
@@ -1127,11 +1221,12 @@ class PlantEncounterTableCompanion
     this.notes = const Value.absent(),
     required RecognitionSource source,
     required RecognitionMethod method,
+    this.userDefinedName = const Value.absent(),
+    this.isIdentified = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       speciesId = Value(speciesId),
        encounterDate = Value(encounterDate),
        photoPaths = Value(photoPaths),
        source = Value(source),
@@ -1149,6 +1244,8 @@ class PlantEncounterTableCompanion
     Expression<String>? notes,
     Expression<int>? source,
     Expression<int>? method,
+    Expression<String>? userDefinedName,
+    Expression<bool>? isIdentified,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -1164,6 +1261,8 @@ class PlantEncounterTableCompanion
       if (notes != null) 'notes': notes,
       if (source != null) 'source': source,
       if (method != null) 'method': method,
+      if (userDefinedName != null) 'user_defined_name': userDefinedName,
+      if (isIdentified != null) 'is_identified': isIdentified,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1172,7 +1271,7 @@ class PlantEncounterTableCompanion
 
   PlantEncounterTableCompanion copyWith({
     Value<String>? id,
-    Value<String>? speciesId,
+    Value<String?>? speciesId,
     Value<DateTime>? encounterDate,
     Value<String?>? location,
     Value<double?>? latitude,
@@ -1181,6 +1280,8 @@ class PlantEncounterTableCompanion
     Value<String?>? notes,
     Value<RecognitionSource>? source,
     Value<RecognitionMethod>? method,
+    Value<String?>? userDefinedName,
+    Value<bool>? isIdentified,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -1196,6 +1297,8 @@ class PlantEncounterTableCompanion
       notes: notes ?? this.notes,
       source: source ?? this.source,
       method: method ?? this.method,
+      userDefinedName: userDefinedName ?? this.userDefinedName,
+      isIdentified: isIdentified ?? this.isIdentified,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -1239,6 +1342,12 @@ class PlantEncounterTableCompanion
         $PlantEncounterTableTable.$convertermethod.toSql(method.value),
       );
     }
+    if (userDefinedName.present) {
+      map['user_defined_name'] = Variable<String>(userDefinedName.value);
+    }
+    if (isIdentified.present) {
+      map['is_identified'] = Variable<bool>(isIdentified.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1264,6 +1373,8 @@ class PlantEncounterTableCompanion
           ..write('notes: $notes, ')
           ..write('source: $source, ')
           ..write('method: $method, ')
+          ..write('userDefinedName: $userDefinedName, ')
+          ..write('isIdentified: $isIdentified, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -2156,7 +2267,7 @@ typedef $$PlantSpeciesTableTableProcessedTableManager =
 typedef $$PlantEncounterTableTableCreateCompanionBuilder =
     PlantEncounterTableCompanion Function({
       required String id,
-      required String speciesId,
+      Value<String?> speciesId,
       required DateTime encounterDate,
       Value<String?> location,
       Value<double?> latitude,
@@ -2165,6 +2276,8 @@ typedef $$PlantEncounterTableTableCreateCompanionBuilder =
       Value<String?> notes,
       required RecognitionSource source,
       required RecognitionMethod method,
+      Value<String?> userDefinedName,
+      Value<bool> isIdentified,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<int> rowid,
@@ -2172,7 +2285,7 @@ typedef $$PlantEncounterTableTableCreateCompanionBuilder =
 typedef $$PlantEncounterTableTableUpdateCompanionBuilder =
     PlantEncounterTableCompanion Function({
       Value<String> id,
-      Value<String> speciesId,
+      Value<String?> speciesId,
       Value<DateTime> encounterDate,
       Value<String?> location,
       Value<double?> latitude,
@@ -2181,6 +2294,8 @@ typedef $$PlantEncounterTableTableUpdateCompanionBuilder =
       Value<String?> notes,
       Value<RecognitionSource> source,
       Value<RecognitionMethod> method,
+      Value<String?> userDefinedName,
+      Value<bool> isIdentified,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -2245,6 +2360,16 @@ class $$PlantEncounterTableTableFilterComposer
   get method => $composableBuilder(
     column: $table.method,
     builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get userDefinedName => $composableBuilder(
+    column: $table.userDefinedName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isIdentified => $composableBuilder(
+    column: $table.isIdentified,
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
@@ -2317,6 +2442,16 @@ class $$PlantEncounterTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get userDefinedName => $composableBuilder(
+    column: $table.userDefinedName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isIdentified => $composableBuilder(
+    column: $table.isIdentified,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -2371,6 +2506,16 @@ class $$PlantEncounterTableTableAnnotationComposer
   GeneratedColumnWithTypeConverter<RecognitionMethod, int> get method =>
       $composableBuilder(column: $table.method, builder: (column) => column);
 
+  GeneratedColumn<String> get userDefinedName => $composableBuilder(
+    column: $table.userDefinedName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isIdentified => $composableBuilder(
+    column: $table.isIdentified,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -2422,7 +2567,7 @@ class $$PlantEncounterTableTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
-                Value<String> speciesId = const Value.absent(),
+                Value<String?> speciesId = const Value.absent(),
                 Value<DateTime> encounterDate = const Value.absent(),
                 Value<String?> location = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
@@ -2431,6 +2576,8 @@ class $$PlantEncounterTableTableTableManager
                 Value<String?> notes = const Value.absent(),
                 Value<RecognitionSource> source = const Value.absent(),
                 Value<RecognitionMethod> method = const Value.absent(),
+                Value<String?> userDefinedName = const Value.absent(),
+                Value<bool> isIdentified = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -2445,6 +2592,8 @@ class $$PlantEncounterTableTableTableManager
                 notes: notes,
                 source: source,
                 method: method,
+                userDefinedName: userDefinedName,
+                isIdentified: isIdentified,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -2452,7 +2601,7 @@ class $$PlantEncounterTableTableTableManager
           createCompanionCallback:
               ({
                 required String id,
-                required String speciesId,
+                Value<String?> speciesId = const Value.absent(),
                 required DateTime encounterDate,
                 Value<String?> location = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
@@ -2461,6 +2610,8 @@ class $$PlantEncounterTableTableTableManager
                 Value<String?> notes = const Value.absent(),
                 required RecognitionSource source,
                 required RecognitionMethod method,
+                Value<String?> userDefinedName = const Value.absent(),
+                Value<bool> isIdentified = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -2475,6 +2626,8 @@ class $$PlantEncounterTableTableTableManager
                 notes: notes,
                 source: source,
                 method: method,
+                userDefinedName: userDefinedName,
+                isIdentified: isIdentified,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

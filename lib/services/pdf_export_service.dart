@@ -368,6 +368,8 @@ class PDFExportService {
         return '智能识别';
       case RecognitionMethod.manual:
         return '手动添加';
+      case RecognitionMethod.none:
+        return '未识别';
     }
   }
 

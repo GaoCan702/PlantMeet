@@ -254,6 +254,7 @@ enum RecognitionMethod {
   cloud, // 云端识别
   hybrid, // 混合识别
   manual, // 手动输入
+  none, // 未识别（快速记录）
 }
 
 extension RecognitionMethodExtension on RecognitionMethod {
@@ -269,6 +270,8 @@ extension RecognitionMethodExtension on RecognitionMethod {
         return '智能识别';
       case RecognitionMethod.manual:
         return '手动输入';
+      case RecognitionMethod.none:
+        return '未识别';
     }
   }
 
@@ -284,6 +287,8 @@ extension RecognitionMethodExtension on RecognitionMethod {
         return '结合本地和云端，取长补短';
       case RecognitionMethod.manual:
         return '用户手动输入植物信息';
+      case RecognitionMethod.none:
+        return '未进行识别，等待后续识别';
     }
   }
 }

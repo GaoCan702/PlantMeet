@@ -298,6 +298,12 @@ class RecognitionService {
           error: '手动模式不支持自动识别',
           method: RecognitionMethod.manual,
         );
+      
+      case RecognitionMethod.none:
+        return RecognitionResponse.error(
+          error: '未识别模式不支持识别操作',
+          method: RecognitionMethod.none,
+        );
 
       case RecognitionMethod.hybrid:
         // 这种情况不应该发生，因为hybrid会被特殊处理
@@ -717,6 +723,8 @@ class RecognitionService {
         return _isEmbeddedModelReady || _isMNNChatReady;
       case RecognitionMethod.manual:
         return true; // 手动输入总是可用
+      case RecognitionMethod.none:
+        return false; // 未识别模式不可用于识别
     }
   }
 
@@ -733,6 +741,8 @@ class RecognitionService {
         return '智能识别';
       case RecognitionMethod.manual:
         return '手动输入';
+      case RecognitionMethod.none:
+        return '未识别';
     }
   }
 
@@ -749,6 +759,8 @@ class RecognitionService {
         return '结合本地和云端模型，取长补短';
       case RecognitionMethod.manual:
         return '用户手动输入植物信息';
+      case RecognitionMethod.none:
+        return '未进行识别，等待后续识别';
     }
   }
 

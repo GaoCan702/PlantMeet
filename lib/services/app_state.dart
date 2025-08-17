@@ -193,12 +193,78 @@ class AppState extends ChangeNotifier {
   List<PlantEncounter> getEncountersForSpecies(String speciesId) {
     return _encounters.where((e) => e.speciesId == speciesId).toList();
   }
+  
+  // 添加未识别的植物遇见记录
+  Future<void> addUnidentifiedEncounter(PlantEncounter encounter) async {
+    _setLoading(true);
+    try {
+      // 直接创建遇见记录，不需要物种信息
+      await databaseService.createEncounter(encounter);
+      await _loadData();
+    } catch (e) {
+      _setError('Failed to add unidentified encounter: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  // 获取未识别的遇见记录
+  List<PlantEncounter> getUnidentifiedEncounters() {
+    return _encounters.where((e) => !e.isIdentified).toList()
+      ..sort((a, b) => b.encounterDate.compareTo(a.encounterDate));
+  }
+  
+  // 获取所有遇见记录（包括已识别和未识别）
+  List<PlantEncounter> getAllEncounters() {
+    return _encounters..sort((a, b) => b.encounterDate.compareTo(a.encounterDate));
+  }
+  
+  // 更新未识别植物为已识别
+  Future<void> updateUnidentifiedToIdentified(
+    PlantSpecies species,
+    PlantEncounter encounter,
+  ) async {
+    _setLoading(true);
+    try {
+      // 1. 检查或创建物种
+      final existingSpecies = await databaseService.findSpeciesByNames(
+        species.scientificName,
+        species.commonName,
+      );
+      
+      String finalSpeciesId;
+      if (existingSpecies != null) {
+        finalSpeciesId = existingSpecies.id;
+      } else {
+        finalSpeciesId = species.id;
+        await databaseService.createSpecies(species);
+      }
+      
+      // 2. 更新遇见记录
+      final updatedEncounter = encounter.copyWith(
+        speciesId: finalSpeciesId,
+        isIdentified: true,
+        updatedAt: DateTime.now(),
+      );
+      
+      await databaseService.updateEncounter(updatedEncounter);
+      
+      // 3. 重新加载数据
+      await _loadData();
+    } catch (e) {
+      _setError('Failed to update encounter: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
 
   List<PlantSpecies> getSpeciesWithEncounters() {
     return _species
         .where(
           (species) =>
-              _encounters.any((encounter) => encounter.speciesId == species.id),
+              _encounters.any((encounter) => 
+                encounter.speciesId == species.id && 
+                encounter.isIdentified == true),
         )
         .toList();
   }

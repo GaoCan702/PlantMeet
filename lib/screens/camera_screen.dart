@@ -7,6 +7,7 @@ import '../services/permission_service.dart';
 import '../services/recognition_service.dart';
 import '../models/index.dart';
 import '../widgets/copyable_error_message.dart';
+import 'quick_record_screen_v2.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -45,12 +46,6 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _takePicture() async {
-    // 检查是否有可用的识别服务
-    if (!_hasAvailableRecognitionMethod()) {
-      _showRecognitionServiceRequiredDialog();
-      return;
-    }
-
     if (!_hasPermissions) {
       await _requestPermissions();
       return;
@@ -63,9 +58,8 @@ class _CameraScreenState extends State<CameraScreen> {
       );
 
       if (image != null) {
-        setState(() {
-          _imagePath = image.path;
-        });
+        // 显示选项：识别还是快速记录
+        _showRecordOptions(image.path);
       }
     } catch (e) {
       _showError('拍照失败: $e');
@@ -73,12 +67,6 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _pickFromGallery() async {
-    // 检查是否有可用的识别服务
-    if (!_hasAvailableRecognitionMethod()) {
-      _showRecognitionServiceRequiredDialog();
-      return;
-    }
-
     if (!_hasPermissions) {
       await _requestPermissions();
       return;
@@ -91,13 +79,97 @@ class _CameraScreenState extends State<CameraScreen> {
       );
 
       if (image != null) {
-        setState(() {
-          _imagePath = image.path;
-        });
+        // 显示选项：识别还是快速记录
+        _showRecordOptions(image.path);
       }
     } catch (e) {
       _showError('选择图片失败: $e');
     }
+  }
+  
+  void _showRecordOptions(String imagePath) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '选择操作',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.camera_alt, color: Colors.green.shade600),
+              ),
+              title: const Text('快速记录'),
+              subtitle: const Text('无需识别，记录这次遇见'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => QuickRecordScreenV2(imagePath: imagePath),
+                  ),
+                ).then((_) {
+                  // 返回后关闭相机页面
+                  Navigator.pop(context);
+                });
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.search, color: Colors.blue.shade600),
+              ),
+              title: const Text('AI识别'),
+              subtitle: Text(
+                _hasAvailableRecognitionMethod() 
+                  ? '使用AI识别植物种类'
+                  : '需要先配置识别服务',
+              ),
+              enabled: _hasAvailableRecognitionMethod(),
+              onTap: _hasAvailableRecognitionMethod() ? () {
+                Navigator.pop(context);
+                setState(() {
+                  _imagePath = imagePath;
+                });
+              } : null,
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.close, color: Colors.grey),
+              title: const Text('取消'),
+              onTap: () => Navigator.pop(context),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _requestPermissions() async {

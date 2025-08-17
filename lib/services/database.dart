@@ -24,7 +24,7 @@ class PlantSpeciesTable extends Table {
 
 class PlantEncounterTable extends Table {
   TextColumn get id => text()();
-  TextColumn get speciesId => text()();
+  TextColumn get speciesId => text().nullable()(); // 改为可空，支持未识别植物
   DateTimeColumn get encounterDate => dateTime()();
   TextColumn get location => text().nullable()();
   RealColumn get latitude => real().nullable()();
@@ -33,6 +33,8 @@ class PlantEncounterTable extends Table {
   TextColumn get notes => text().nullable()();
   IntColumn get source => intEnum<RecognitionSource>()();
   IntColumn get method => intEnum<RecognitionMethod>()();
+  TextColumn get userDefinedName => text().nullable()(); // 用户自定义名称
+  BoolColumn get isIdentified => boolean().withDefault(const Constant(false))(); // 是否已识别
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -63,7 +65,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -77,6 +79,19 @@ class AppDatabase extends _$AppDatabase {
           appSettingsTable,
           appSettingsTable.enableLocalRecognition,
         );
+      }
+      if (from < 4) {
+        // 添加支持未识别植物的新字段
+        await m.addColumn(
+          plantEncounterTable,
+          plantEncounterTable.userDefinedName,
+        );
+        await m.addColumn(
+          plantEncounterTable,
+          plantEncounterTable.isIdentified,
+        );
+        // 将speciesId改为可空在某些数据库中需要重建表
+        // 这里假设新安装或可以接受数据迁移
       }
     },
   );

@@ -144,7 +144,7 @@ class DatabaseService {
         .insert(
           PlantEncounterTableCompanion.insert(
             id: encounter.id,
-            speciesId: encounter.speciesId,
+            speciesId: Value(encounter.speciesId),  // 使用Value包装可空类型
             encounterDate: encounter.encounterDate,
             location: Value(encounter.location),
             latitude: Value(encounter.latitude),
@@ -153,6 +153,8 @@ class DatabaseService {
             notes: Value(encounter.notes),
             source: encounter.source,
             method: encounter.method,
+            userDefinedName: Value(encounter.userDefinedName),
+            isIdentified: Value(encounter.isIdentified),
             createdAt: encounter.createdAt,
             updatedAt: encounter.updatedAt,
           ),
@@ -161,22 +163,22 @@ class DatabaseService {
   }
 
   Future<PlantEncounter> updateEncounter(PlantEncounter encounter) async {
-    await database
-        .update(database.plantEncounterTable)
-        .replace(
-          PlantEncounterTableCompanion.insert(
-            id: encounter.id,
-            speciesId: encounter.speciesId,
-            encounterDate: encounter.encounterDate,
+    await database.update(database.plantEncounterTable).replace(
+          PlantEncounterTableCompanion(
+            id: Value(encounter.id),
+            speciesId: Value(encounter.speciesId),
+            encounterDate: Value(encounter.encounterDate),
             location: Value(encounter.location),
             latitude: Value(encounter.latitude),
             longitude: Value(encounter.longitude),
-            photoPaths: jsonEncode(encounter.photoPaths),
+            photoPaths: Value(jsonEncode(encounter.photoPaths)),
             notes: Value(encounter.notes),
-            source: encounter.source,
-            method: encounter.method,
-            createdAt: encounter.createdAt,
-            updatedAt: DateTime.now(),
+            source: Value(encounter.source),
+            method: Value(encounter.method),
+            userDefinedName: Value(encounter.userDefinedName),
+            isIdentified: Value(encounter.isIdentified),
+            createdAt: Value(encounter.createdAt),
+            updatedAt: Value(encounter.updatedAt),
           ),
         );
     return encounter;
