@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plantmeet/services/model_storage_manager.dart';
 
@@ -65,10 +66,29 @@ class SimpleModelDownloader {
 
   SimpleModelDownloader(this._storageManager);
 
-  /// 获取模型文件路径
+  /// 清理不完整的下载文件和标记
+  Future<void> clearIncompleteDownload(String modelId) async {
+    try {
+      final filePath = await getModelFilePath(modelId);
+      final file = File(filePath);
+      
+      if (file.existsSync()) {
+        await file.delete();
+        _logger.i('已删除不完整的模型文件: $filePath');
+      }
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefsModelKey);
+      _logger.i('已清除下载标记');
+    } catch (e) {
+      _logger.e('清理不完整下载时出错: $e');
+    }
+  }
+
+  /// 获取模型文件路径 - 使用与flutter_gemma example相同的方式
   Future<String> getModelFilePath(String modelId) async {
-    final modelPath = await _storageManager.getModelPath(modelId);
-    return path.join(modelPath, _fileName);
+    final directory = await getApplicationDocumentsDirectory();
+    return '${directory.path}/$_fileName';
   }
 
   /// 检查模型是否已存在且完整
@@ -118,9 +138,30 @@ class SimpleModelDownloader {
         return false;
       }
 
-      // 启动阶段仅做本地快速校验，避免网络请求阻塞冷启动
-      _logger.i('✅ 本地检测到模型文件: ${file.path}');
-      return true;
+      // 验证文件大小是否完整
+      final actualSize = await file.length();
+      
+      // 尝试获取远程文件大小进行比较
+      final remoteSize = await _getRemoteFileSize();
+      if (remoteSize != null) {
+        if (actualSize == remoteSize) {
+          _logger.i('✅ 本地模型文件完整: ${file.path} (${(actualSize / 1024 / 1024 / 1024).toStringAsFixed(2)} GB)');
+          return true;
+        } else {
+          _logger.w('⚠️ 模型文件不完整: 期望 ${(remoteSize / 1024 / 1024 / 1024).toStringAsFixed(2)} GB, 实际 ${(actualSize / 1024 / 1024 / 1024).toStringAsFixed(2)} GB');
+          return false;
+        }
+      } else {
+        // 如果无法获取远程大小，使用已知的期望大小
+        final expectedSize = 4405655031; // gemma-3n-E4B-it-int4.task 的准确大小
+        if (actualSize == expectedSize) {
+          _logger.i('✅ 本地模型文件完整: ${file.path} (${(actualSize / 1024 / 1024 / 1024).toStringAsFixed(2)} GB)');
+          return true;
+        } else {
+          _logger.w('⚠️ 模型文件不完整: 期望 ${(expectedSize / 1024 / 1024 / 1024).toStringAsFixed(2)} GB, 实际 ${(actualSize / 1024 / 1024 / 1024).toStringAsFixed(2)} GB');
+          return false;
+        }
+      }
     } catch (e) {
       _logger.e('检查模型文件时出错: $e');
       return false;
@@ -298,6 +339,16 @@ class SimpleModelDownloader {
       }
       _logger.e('下载模型时出错: $e');
       onStatusUpdate('下载失败: $e');
+      
+      // 下载失败时清除已完成标记，确保下次能正确检测
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_prefsModelKey);
+        _logger.i('已清除下载完成标记');
+      } catch (clearError) {
+        _logger.w('清除标记时出错: $clearError');
+      }
+      
       _downloadCompleter?.completeError(e);
       rethrow;
     } finally {

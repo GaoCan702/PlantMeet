@@ -48,8 +48,8 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
                     _buildDownloadPromptSection(context, modelService),
                   if (modelService.isModelReady)
                     _buildModelReadySection(context, modelService),
-                  if (modelService.isModelDownloaded && !modelService.hasError)
-                    _buildChatTestSection(context, modelService),
+                  if (modelService.isModelDownloaded && !modelService.hasError && !modelService.isModelReady)
+                    _buildSimpleChatSection(context, modelService),
                   if (modelService.hasError)
                     _buildErrorSection(context, modelService),
                   const SizedBox(height: 24),
@@ -247,6 +247,36 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
                 label: const Text('继续'),
               ),
             ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('重新下载'),
+                      content: const Text('这将删除不完整的下载文件并重新开始。确定要继续吗？'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('取消'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('确定'),
+                        ),
+                      ],
+                    ),
+                  );
+                  
+                  if (confirm == true) {
+                    await modelService.clearIncompleteDownloadAndRestart();
+                  }
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('重新下载'),
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
@@ -392,23 +422,71 @@ class EmbeddedModelManagerScreen extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            // Chat测试按钮 - 保持应用统一的绿色风格
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).pushNamed('/model-chat-test'),
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: const Text('多模态聊天测试'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.green.shade700,
+                  side: BorderSide(color: Colors.green.shade300),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  /// Chat测试区域 - 独立显示，不依赖模型ready状态
-  Widget _buildChatTestSection(
+  /// 简化的Chat测试区域 - 与应用风格统一的绿色主题
+  Widget _buildSimpleChatSection(
     BuildContext context,
     EmbeddedModelService modelService,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 16),
-        _buildChatTestCard(context, modelService),
-      ],
+    return Card(
+      color: Colors.green.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.chat_bubble_outline, color: Colors.green.shade600),
+                const SizedBox(width: 8),
+                Text(
+                  '模型已下载',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '模型准备中，可以进行聊天测试',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).pushNamed('/model-chat-test'),
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: const Text('多模态聊天测试'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

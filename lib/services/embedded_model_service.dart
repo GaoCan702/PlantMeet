@@ -410,6 +410,32 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// 清理不完整的下载文件，重新开始下载
+  Future<void> clearIncompleteDownloadAndRestart() async {
+    try {
+      _logger.i('Clearing incomplete download and restarting...');
+      
+      // 清理不完整的下载
+      await _downloader.clearIncompleteDownload(_modelId);
+      
+      // 重置状态
+      _updateState(
+        _state.copyWith(
+          status: ModelStatus.notDownloaded,
+          downloadProgress: 0.0,
+          errorMessage: null,
+        ),
+      );
+      
+      _downloadStatus = '';
+      notifyListeners();
+      
+      _logger.i('Incomplete download cleared, ready to restart');
+    } catch (e) {
+      _logger.e('Failed to clear incomplete download: $e');
+    }
+  }
+
   // 生命周期回调：前后台切换时暂停/恢复下载
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {

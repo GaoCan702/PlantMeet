@@ -4,6 +4,7 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma/pigeon.g.dart';
 import 'package:flutter_gemma/core/model.dart';
 import 'package:logger/logger.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
 import '../models/embedded_model.dart';
 import '../models/recognition_result.dart';
@@ -85,20 +86,31 @@ class GemmaInferenceService {
     try {
       _logger.i('Initializing Gemma model...');
 
-      // Check if model files exist
-      final modelPath = await _storageManager.getModelPath(_modelId);
-      final modelFile = File('$modelPath/$_modelFileName');
+      // Use the same approach as the official flutter_gemma example
+      // Check for model file in application documents directory (like the reference)
+      final directory = await getApplicationDocumentsDirectory();
+      final modelFile = File('${directory.path}/$_modelFileName');
 
       if (!await modelFile.exists()) {
-        throw Exception(
-          'Model file not found at: ${modelFile.path}. Please download the model first.',
-        );
+        // Also check our storage manager path as fallback
+        final modelPath = await _storageManager.getModelPath(_modelId);
+        final fallbackFile = File('$modelPath/$_modelFileName');
+        
+        if (await fallbackFile.exists()) {
+          // Copy from our storage location to the expected location
+          _logger.i('Copying model from storage to documents directory...');
+          await fallbackFile.copy(modelFile.path);
+        } else {
+          throw Exception(
+            'Model file not found. Expected at: ${modelFile.path}. Please download the model first.',
+          );
+        }
       }
 
       // Get device capability for optimal configuration
       final capability = await _capabilityDetector.detect();
       
-      // Always set model path like in the official example
+      // Always set model path like in the official example - this is the key difference!
       if (!await _gemmaPlugin.modelManager.isModelInstalled) {
         await _gemmaPlugin.modelManager.setModelPath(modelFile.path);
         _logger.i('Model path set to: ${modelFile.path}');
