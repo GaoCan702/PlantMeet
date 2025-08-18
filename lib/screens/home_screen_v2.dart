@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../services/app_state.dart';
 import '../widgets/unified_plant_card.dart';
 import 'unidentified_plant_detail_screen_v2.dart';
-import 'location_debug_screen_v2.dart';
 import 'plant_detail_screen_v2.dart';
 
 class HomeScreenV2 extends StatefulWidget {
@@ -188,33 +187,34 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                                   ),
                                 ),
                                 const Spacer(),
-                                // 统计卡片组
-                                Row(
-                                  children: [
-                                    _buildStatCard(
-                                      context,
-                                      value: '${allEncounters.length}',
-                                      label: '次遇见',
-                                      icon: Icons.visibility,
-                                      color: Colors.blue,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    _buildStatCard(
-                                      context,
-                                      value: '${speciesWithEncounters.length}',
-                                      label: '已识别',
-                                      icon: Icons.check_circle,
-                                      color: Colors.green,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    _buildStatCard(
-                                      context,
-                                      value: '${unidentifiedEncounters.length}',
-                                      label: '待识别',
-                                      icon: Icons.help_outline,
-                                      color: Colors.orange,
-                                    ),
-                                  ],
+                                // 简洁的统计信息
+                                Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Row(
+                                    children: [
+                                      _buildStatCard(
+                                        context,
+                                        value: _formatNumber(allEncounters.length),
+                                        label: '次遇见',
+                                        icon: Icons.visibility,
+                                        color: Colors.blue.shade600,
+                                      ),
+                                      _buildStatCard(
+                                        context,
+                                        value: _formatNumber(speciesWithEncounters.length),
+                                        label: '已识别',
+                                        icon: Icons.local_florist,
+                                        color: Colors.green.shade600,
+                                      ),
+                                      _buildStatCard(
+                                        context,
+                                        value: _formatNumber(unidentifiedEncounters.length),
+                                        label: '待识别',
+                                        icon: Icons.help_outline,
+                                        color: Colors.orange.shade600,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -225,25 +225,6 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   ),
                 ),
                 actions: [
-                  // 临时调试按钮
-                  IconButton(
-                    icon: const Icon(Icons.bug_report, color: Colors.orange),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LocationDebugScreenV2(),
-                        ),
-                      );
-                    },
-                  ),
-                  // 测试新UI按钮
-                  IconButton(
-                    icon: const Icon(Icons.preview, color: Colors.purple),
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/test-plant-detail');
-                    },
-                  ),
                   IconButton(
                     icon: const Icon(Icons.photo_library),
                     onPressed: () => Navigator.pushNamed(context, '/gallery'),
@@ -329,22 +310,11 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.9),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: color),
+            Icon(icon, size: 18, color: color.withValues(alpha: 0.8)),
             const SizedBox(width: 6),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,16 +323,16 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: color,
+                    color: Colors.grey.shade800,
                   ),
                 ),
                 Text(
                   label,
                   style: TextStyle(
                     fontSize: 11,
-                    color: color.withValues(alpha: 0.8),
+                    color: Colors.grey.shade700,
                   ),
                 ),
               ],
@@ -371,6 +341,16 @@ class _HomeScreenV2State extends State<HomeScreenV2>
         ),
       ),
     );
+  }
+  
+  // 格式化数字，大于1000时显示为1.2k格式
+  String _formatNumber(int number) {
+    if (number >= 10000) {
+      return '${(number / 1000).toStringAsFixed(0)}k';
+    } else if (number >= 1000) {
+      return '${(number / 1000).toStringAsFixed(1)}k';
+    }
+    return number.toString();
   }
 
   Widget _buildGridView(
