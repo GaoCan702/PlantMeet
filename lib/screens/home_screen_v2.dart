@@ -19,12 +19,23 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
   bool _isScrolled = false;
+  final GlobalKey<RefreshIndicatorState> _refreshKey = GlobalKey<RefreshIndicatorState>();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _scrollController.addListener(_onScroll);
+    // 每次进入页面时重新加载数据
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshData();
+    });
+  }
+  
+  Future<void> _refreshData() async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    // 使用refreshData替代initialize，避免隐私政策检查影响数据加载
+    await appState.refreshData();
   }
 
   void _onScroll() {
@@ -99,9 +110,14 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           final allEncounters = appState.encounters;
           final totalItems = speciesWithEncounters.length + unidentifiedEncounters.length;
 
-          return CustomScrollView(
-            controller: _scrollController,
-            slivers: [
+          return RefreshIndicator(
+            key: _refreshKey,
+            onRefresh: _refreshData,
+            color: Theme.of(context).colorScheme.primary,
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
               // 自定义AppBar
               SliverAppBar(
                 expandedHeight: 200,
@@ -294,7 +310,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   ],
                 ),
               ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -367,17 +384,20 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       return _buildEmptyState(context);
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-      ),
-      child: GridView.builder(
-        padding: const EdgeInsets.all(16),
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      color: Theme.of(context).colorScheme.primary,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+        ),
+        child: GridView.builder(
+          padding: const EdgeInsets.all(12),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.7,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 0.85, // 调整比例以适应更紧凑的卡片
         ),
         itemCount: totalItems,
         itemBuilder: (context, index) {
@@ -428,6 +448,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
             );
           }
         },
+        ),
       ),
     );
   }
@@ -446,17 +467,20 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.green.shade50,
-      ),
-      child: GridView.builder(
-        padding: const EdgeInsets.all(16),
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      color: Theme.of(context).colorScheme.primary,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+        ),
+        child: GridView.builder(
+          padding: const EdgeInsets.all(12),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.7,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 0.85, // 调整比例以适应更紧凑的卡片
         ),
         itemCount: speciesWithEncounters.length,
         itemBuilder: (context, index) {
@@ -485,6 +509,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
             index: index,
           );
         },
+        ),
       ),
     );
   }
@@ -503,17 +528,20 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-      ),
-      child: GridView.builder(
-        padding: const EdgeInsets.all(16),
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      color: Theme.of(context).colorScheme.primary,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+        ),
+        child: GridView.builder(
+          padding: const EdgeInsets.all(12),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.7,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 0.85, // 调整比例以适应更紧凑的卡片
         ),
         itemCount: unidentifiedEncounters.length,
         itemBuilder: (context, index) {
@@ -535,6 +563,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
             index: index,
           );
         },
+        ),
       ),
     );
   }

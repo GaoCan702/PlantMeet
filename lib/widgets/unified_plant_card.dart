@@ -18,7 +18,7 @@ class UnifiedPlantCard extends StatelessWidget {
   final VoidCallback onTap;
   
   // 固定的图片高度比例（相对于卡片宽度）
-  static const double imageAspectRatio = 0.75;
+  static const double imageAspectRatio = 0.65; // 减小图片高度比例，让卡片更紧凑
   
   const UnifiedPlantCard.identified({
     super.key,
@@ -52,11 +52,11 @@ class UnifiedPlantCard extends StatelessWidget {
               child: _buildImageSection(),
             ),
             
-            // 信息区域 - 固定高度
+            // 信息区域 - 更紧凑的高度
             SizedBox(
-              height: 120, // 固定高度，确保对齐
+              height: 85, // 减小高度，更紧凑
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10), // 减小内边距
                 child: _buildInfoSection(context),
               ),
             ),
@@ -133,15 +133,15 @@ class UnifiedPlantCard extends StatelessWidget {
         // 植物名称
         Text(
           species!.commonName,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.bold,
-            height: 1.2,
+            height: 1.1,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
         
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         
         // 学名
         Text(
@@ -149,7 +149,8 @@ class UnifiedPlantCard extends StatelessWidget {
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             fontStyle: FontStyle.italic,
             color: Colors.grey[600],
-            height: 1.2,
+            fontSize: 11,
+            height: 1.1,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -161,12 +162,13 @@ class UnifiedPlantCard extends StatelessWidget {
         Row(
           children: [
             // 遇见次数
-            Icon(Icons.visibility, size: 14, color: Colors.grey[600]),
-            const SizedBox(width: 4),
+            Icon(Icons.visibility, size: 12, color: Colors.grey[600]),
+            const SizedBox(width: 3),
             Text(
-              '$encounterCount 次遇见',
+              '$encounterCount 次',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Colors.grey[600],
+                fontSize: 11,
               ),
             ),
             
@@ -175,26 +177,26 @@ class UnifiedPlantCard extends StatelessWidget {
             // 毒性标记（如果有）
             if (species!.isToxic == true)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
                   color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.warning,
-                      size: 12,
+                      size: 10,
                       color: Colors.orange.shade700,
                     ),
                     const SizedBox(width: 2),
                     Text(
                       '有毒',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: Colors.orange.shade700,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -207,81 +209,81 @@ class UnifiedPlantCard extends StatelessWidget {
   }
   
   Widget _buildUnidentifiedInfo(BuildContext context) {
-    final dateFormat = DateFormat('MM月dd日');
+    final dateFormat = DateFormat('MM/dd');
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 名称或默认文字
-        Text(
-          unidentifiedEncounter!.userDefinedName ?? '未识别的植物',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            height: 1.2,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        
-        const SizedBox(height: 4),
-        
-        // 待识别标签
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.orange.shade100,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            '待识别',
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.orange.shade700,
-              fontWeight: FontWeight.w500,
+        // 名称和待识别标签在同一行
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                unidentifiedEncounter!.userDefinedName ?? '未识别的植物',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  height: 1.1,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
+            const SizedBox(width: 4),
+            // 小徽标样式的待识别标签
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '待识别',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.orange.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
         
         const Spacer(), // 使用Spacer推送底部内容
         
-        // 底部信息行 - 固定布局
-        SizedBox(
-          height: 20,  // 固定高度
-          child: Row(
-            children: [
-              // 日期 - 始终显示
-              Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
-              const SizedBox(width: 4),
-              Text(
-                dateFormat.format(unidentifiedEncounter!.encounterDate),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
-                ),
+        // 底部信息行 - 更紧凑
+        Row(
+          children: [
+            // 日期
+            Icon(Icons.calendar_today, size: 12, color: Colors.grey[600]),
+            const SizedBox(width: 3),
+            Text(
+              dateFormat.format(unidentifiedEncounter!.encounterDate),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[600],
+                fontSize: 11,
               ),
-              
-              const SizedBox(width: 12),
-              
-              // 位置 - 使用智能显示
-              Icon(Icons.place, size: 14, 
-                color: unidentifiedEncounter!.location != null 
-                    ? Colors.grey[600] 
-                    : Colors.grey[400]),
-              const SizedBox(width: 4),
+            ),
+            
+            const SizedBox(width: 8),
+            
+            // 位置
+            if (unidentifiedEncounter!.location != null) ...[
+              Icon(Icons.place, size: 12, color: Colors.grey[600]),
+              const SizedBox(width: 3),
               Expanded(
                 child: Text(
                   _getLocationDisplay(),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: unidentifiedEncounter!.location != null 
-                        ? Colors.grey[600]
-                        : Colors.grey[400],
+                    color: Colors.grey[600],
+                    fontSize: 11,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
-          ),
+          ],
         ),
       ],
     );

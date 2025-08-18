@@ -60,6 +60,18 @@ class AppState extends ChangeNotifier {
       _setError('Failed to load data: $e');
     }
   }
+  
+  // 公开的刷新数据方法，供页面使用
+  Future<void> refreshData() async {
+    _setLoading(true);
+    try {
+      await _loadData();
+    } catch (e) {
+      _setError('Failed to refresh data: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
 
   Future<void> updateSettings(AppSettings settings) async {
     _setLoading(true);
