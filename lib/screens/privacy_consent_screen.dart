@@ -448,33 +448,4 @@ class _PrivacyConsentScreenState extends State<PrivacyConsentScreen>
     );
   }
 
-  /// 显示退出应用确认对话框
-  void _showExitDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('确认退出'),
-          content: const Text('如果不同意用户协议和隐私政策，将无法使用PlantMeet应用。确定要退出吗？'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // 这里可以调用系统退出方法
-                // SystemNavigator.pop(); // 需要import 'package:flutter/services.dart';
-              },
-              child: Text(
-                '退出应用',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }

@@ -140,18 +140,20 @@ class PlantRecognitionCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 安全信息（最重要）
+        // 极简模式：只显示基本的安全提醒（无具体分析）
         _buildSafetyInfo(theme),
 
-        const SizedBox(height: 12),
+        // 只有当有实际特征时才显示
+        if (result.features.isNotEmpty && !_isGemmaMinimalFeatures()) ...[
+          const SizedBox(height: 12),
+          _buildFeatures(theme),
+        ],
 
-        // 关键特征
-        if (result.features.isNotEmpty) _buildFeatures(theme),
-
-        const SizedBox(height: 12),
-
-        // 生活信息
-        _buildLifeInfo(theme),
+        // 只有当有具体位置信息时才显示生活信息
+        if (result.locations.isNotEmpty || result.season != null) ...[
+          const SizedBox(height: 12),
+          _buildLifeInfo(theme),
+        ],
 
         // 养护建议（如果有）
         if (result.care != null) ...[
@@ -164,7 +166,68 @@ class PlantRecognitionCard extends StatelessWidget {
           const SizedBox(height: 12),
           _buildFunFact(theme),
         ],
+
+        // 对于Gemma极简输出，显示额外说明
+        if (_isGemmaMinimalOutput()) ...[
+          const SizedBox(height: 12),
+          _buildMinimalOutputNotice(theme),
+        ],
       ],
+    );
+  }
+
+  /// 检查是否是Gemma模型的极简输出
+  bool _isGemmaMinimalOutput() {
+    return result.tags.any((tag) => tag.contains('Gemma')) &&
+           result.features.isEmpty &&
+           result.locations.isEmpty &&
+           result.care == null &&
+           result.funFact == null;
+  }
+
+  /// 检查是否是Gemma模型的占位特征
+  bool _isGemmaMinimalFeatures() {
+    return result.features.length == 1 && 
+           result.features.first.contains('Gemma');
+  }
+
+  /// 为极简输出显示友好提醒
+  Widget _buildMinimalOutputNotice(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: theme.colorScheme.primary, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '离线AI识别',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '此结果来自本地AI模型的基础识别。如需更详细信息，建议咨询专业人士或查阅植物百科。',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -172,6 +235,33 @@ class PlantRecognitionCard extends StatelessWidget {
     final safety = result.safety;
     final (icon, color) = _getSafetyIconAndColor(safety.level);
 
+    // 对于Gemma极简输出，显示简化的安全提醒
+    if (_isGemmaMinimalOutput()) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.orange.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.warning_amber, color: Colors.orange, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '请谨慎处理未知植物，避免直接接触或食用',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 原有的详细安全信息显示
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -545,7 +635,7 @@ class RecognitionResultsList extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            response.methodDescription ?? '未知识别方式',
+            response.method.displayName,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

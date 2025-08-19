@@ -146,19 +146,19 @@ class DeviceCapabilityDetector {
     InferenceBackend backend,
   ) {
     // Rough estimation based on device capabilities
-    int baseTimeSeconds = 15; // Base time for 4B model inference
+    int baseTimeSeconds = 15; // Base time for 4B model inference (slower than 2B)
 
     if (ramSize >= 8 * 1024 * 1024 * 1024) {
       // 8GB+
-      baseTimeSeconds = 8;
+      baseTimeSeconds = 10; // E4B is slower than E2B
     } else if (ramSize >= 6 * 1024 * 1024 * 1024) {
       // 6GB+
-      baseTimeSeconds = 12;
+      baseTimeSeconds = 8;
     } else if (ramSize >= 4 * 1024 * 1024 * 1024) {
       // 4GB+
-      baseTimeSeconds = 15;
+      baseTimeSeconds = 12;
     } else {
-      baseTimeSeconds = 25; // Low-end devices
+      baseTimeSeconds = 18; // Low-end devices, but still better than E4B
     }
 
     // Adjust for backend

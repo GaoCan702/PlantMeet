@@ -170,7 +170,7 @@ def check_model_file(model_dir):
         return False
     
     file_size = model_file.stat().st_size
-    expected_size = 4405655031  # 约4.1GB
+    expected_size = 4405655031  # 约4.1GB (E4B model)
     
     if file_size != expected_size:
         print(f"⚠️  模型文件大小异常:")

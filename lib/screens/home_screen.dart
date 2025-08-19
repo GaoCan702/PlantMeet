@@ -74,14 +74,6 @@ class HomeScreen extends StatelessWidget {
           final unidentifiedEncounters = appState.getUnidentifiedEncounters();
           final totalItems = speciesWithEncounters.length + unidentifiedEncounters.length;
           
-          // Debug logs
-          print('DEBUG: Total species: ${appState.species.length}');
-          print('DEBUG: Total encounters: ${appState.encounters.length}');
-          print('DEBUG: Species with encounters: ${speciesWithEncounters.length}');
-          print('DEBUG: Unidentified encounters: ${unidentifiedEncounters.length}');
-          for (var enc in appState.encounters.take(3)) {
-            print('DEBUG: Encounter - id: ${enc.id}, speciesId: ${enc.speciesId}, isIdentified: ${enc.isIdentified}');
-          }
 
           if (totalItems == 0) {
             return Column(

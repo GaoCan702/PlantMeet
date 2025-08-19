@@ -679,6 +679,18 @@ class $PlantEncounterTableTable extends PlantEncounterTable
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _mergedToSpeciesIdMeta = const VerificationMeta(
+    'mergedToSpeciesId',
+  );
+  @override
+  late final GeneratedColumn<String> mergedToSpeciesId =
+      GeneratedColumn<String>(
+        'merged_to_species_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -715,6 +727,7 @@ class $PlantEncounterTableTable extends PlantEncounterTable
     method,
     userDefinedName,
     isIdentified,
+    mergedToSpeciesId,
     createdAt,
     updatedAt,
   ];
@@ -802,6 +815,15 @@ class $PlantEncounterTableTable extends PlantEncounterTable
         ),
       );
     }
+    if (data.containsKey('merged_to_species_id')) {
+      context.handle(
+        _mergedToSpeciesIdMeta,
+        mergedToSpeciesId.isAcceptableOrUnknown(
+          data['merged_to_species_id']!,
+          _mergedToSpeciesIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -882,6 +904,10 @@ class $PlantEncounterTableTable extends PlantEncounterTable
         DriftSqlType.bool,
         data['${effectivePrefix}is_identified'],
       )!,
+      mergedToSpeciesId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}merged_to_species_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -918,6 +944,7 @@ class PlantEncounterTableData extends DataClass
   final RecognitionMethod method;
   final String? userDefinedName;
   final bool isIdentified;
+  final String? mergedToSpeciesId;
   final DateTime createdAt;
   final DateTime updatedAt;
   const PlantEncounterTableData({
@@ -933,6 +960,7 @@ class PlantEncounterTableData extends DataClass
     required this.method,
     this.userDefinedName,
     required this.isIdentified,
+    this.mergedToSpeciesId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -971,6 +999,9 @@ class PlantEncounterTableData extends DataClass
       map['user_defined_name'] = Variable<String>(userDefinedName);
     }
     map['is_identified'] = Variable<bool>(isIdentified);
+    if (!nullToAbsent || mergedToSpeciesId != null) {
+      map['merged_to_species_id'] = Variable<String>(mergedToSpeciesId);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -1002,6 +1033,9 @@ class PlantEncounterTableData extends DataClass
           ? const Value.absent()
           : Value(userDefinedName),
       isIdentified: Value(isIdentified),
+      mergedToSpeciesId: mergedToSpeciesId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mergedToSpeciesId),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -1029,6 +1063,9 @@ class PlantEncounterTableData extends DataClass
       ),
       userDefinedName: serializer.fromJson<String?>(json['userDefinedName']),
       isIdentified: serializer.fromJson<bool>(json['isIdentified']),
+      mergedToSpeciesId: serializer.fromJson<String?>(
+        json['mergedToSpeciesId'],
+      ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -1053,6 +1090,7 @@ class PlantEncounterTableData extends DataClass
       ),
       'userDefinedName': serializer.toJson<String?>(userDefinedName),
       'isIdentified': serializer.toJson<bool>(isIdentified),
+      'mergedToSpeciesId': serializer.toJson<String?>(mergedToSpeciesId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -1071,6 +1109,7 @@ class PlantEncounterTableData extends DataClass
     RecognitionMethod? method,
     Value<String?> userDefinedName = const Value.absent(),
     bool? isIdentified,
+    Value<String?> mergedToSpeciesId = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => PlantEncounterTableData(
@@ -1088,6 +1127,9 @@ class PlantEncounterTableData extends DataClass
         ? userDefinedName.value
         : this.userDefinedName,
     isIdentified: isIdentified ?? this.isIdentified,
+    mergedToSpeciesId: mergedToSpeciesId.present
+        ? mergedToSpeciesId.value
+        : this.mergedToSpeciesId,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -1113,6 +1155,9 @@ class PlantEncounterTableData extends DataClass
       isIdentified: data.isIdentified.present
           ? data.isIdentified.value
           : this.isIdentified,
+      mergedToSpeciesId: data.mergedToSpeciesId.present
+          ? data.mergedToSpeciesId.value
+          : this.mergedToSpeciesId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -1133,6 +1178,7 @@ class PlantEncounterTableData extends DataClass
           ..write('method: $method, ')
           ..write('userDefinedName: $userDefinedName, ')
           ..write('isIdentified: $isIdentified, ')
+          ..write('mergedToSpeciesId: $mergedToSpeciesId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1153,6 +1199,7 @@ class PlantEncounterTableData extends DataClass
     method,
     userDefinedName,
     isIdentified,
+    mergedToSpeciesId,
     createdAt,
     updatedAt,
   );
@@ -1172,6 +1219,7 @@ class PlantEncounterTableData extends DataClass
           other.method == this.method &&
           other.userDefinedName == this.userDefinedName &&
           other.isIdentified == this.isIdentified &&
+          other.mergedToSpeciesId == this.mergedToSpeciesId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -1190,6 +1238,7 @@ class PlantEncounterTableCompanion
   final Value<RecognitionMethod> method;
   final Value<String?> userDefinedName;
   final Value<bool> isIdentified;
+  final Value<String?> mergedToSpeciesId;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -1206,6 +1255,7 @@ class PlantEncounterTableCompanion
     this.method = const Value.absent(),
     this.userDefinedName = const Value.absent(),
     this.isIdentified = const Value.absent(),
+    this.mergedToSpeciesId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1223,6 +1273,7 @@ class PlantEncounterTableCompanion
     required RecognitionMethod method,
     this.userDefinedName = const Value.absent(),
     this.isIdentified = const Value.absent(),
+    this.mergedToSpeciesId = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -1246,6 +1297,7 @@ class PlantEncounterTableCompanion
     Expression<int>? method,
     Expression<String>? userDefinedName,
     Expression<bool>? isIdentified,
+    Expression<String>? mergedToSpeciesId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -1263,6 +1315,7 @@ class PlantEncounterTableCompanion
       if (method != null) 'method': method,
       if (userDefinedName != null) 'user_defined_name': userDefinedName,
       if (isIdentified != null) 'is_identified': isIdentified,
+      if (mergedToSpeciesId != null) 'merged_to_species_id': mergedToSpeciesId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1282,6 +1335,7 @@ class PlantEncounterTableCompanion
     Value<RecognitionMethod>? method,
     Value<String?>? userDefinedName,
     Value<bool>? isIdentified,
+    Value<String?>? mergedToSpeciesId,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -1299,6 +1353,7 @@ class PlantEncounterTableCompanion
       method: method ?? this.method,
       userDefinedName: userDefinedName ?? this.userDefinedName,
       isIdentified: isIdentified ?? this.isIdentified,
+      mergedToSpeciesId: mergedToSpeciesId ?? this.mergedToSpeciesId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -1348,6 +1403,9 @@ class PlantEncounterTableCompanion
     if (isIdentified.present) {
       map['is_identified'] = Variable<bool>(isIdentified.value);
     }
+    if (mergedToSpeciesId.present) {
+      map['merged_to_species_id'] = Variable<String>(mergedToSpeciesId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1375,6 +1433,7 @@ class PlantEncounterTableCompanion
           ..write('method: $method, ')
           ..write('userDefinedName: $userDefinedName, ')
           ..write('isIdentified: $isIdentified, ')
+          ..write('mergedToSpeciesId: $mergedToSpeciesId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -2278,6 +2337,7 @@ typedef $$PlantEncounterTableTableCreateCompanionBuilder =
       required RecognitionMethod method,
       Value<String?> userDefinedName,
       Value<bool> isIdentified,
+      Value<String?> mergedToSpeciesId,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<int> rowid,
@@ -2296,6 +2356,7 @@ typedef $$PlantEncounterTableTableUpdateCompanionBuilder =
       Value<RecognitionMethod> method,
       Value<String?> userDefinedName,
       Value<bool> isIdentified,
+      Value<String?> mergedToSpeciesId,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -2369,6 +2430,11 @@ class $$PlantEncounterTableTableFilterComposer
 
   ColumnFilters<bool> get isIdentified => $composableBuilder(
     column: $table.isIdentified,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mergedToSpeciesId => $composableBuilder(
+    column: $table.mergedToSpeciesId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2452,6 +2518,11 @@ class $$PlantEncounterTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get mergedToSpeciesId => $composableBuilder(
+    column: $table.mergedToSpeciesId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -2513,6 +2584,11 @@ class $$PlantEncounterTableTableAnnotationComposer
 
   GeneratedColumn<bool> get isIdentified => $composableBuilder(
     column: $table.isIdentified,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mergedToSpeciesId => $composableBuilder(
+    column: $table.mergedToSpeciesId,
     builder: (column) => column,
   );
 
@@ -2578,6 +2654,7 @@ class $$PlantEncounterTableTableTableManager
                 Value<RecognitionMethod> method = const Value.absent(),
                 Value<String?> userDefinedName = const Value.absent(),
                 Value<bool> isIdentified = const Value.absent(),
+                Value<String?> mergedToSpeciesId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -2594,6 +2671,7 @@ class $$PlantEncounterTableTableTableManager
                 method: method,
                 userDefinedName: userDefinedName,
                 isIdentified: isIdentified,
+                mergedToSpeciesId: mergedToSpeciesId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -2612,6 +2690,7 @@ class $$PlantEncounterTableTableTableManager
                 required RecognitionMethod method,
                 Value<String?> userDefinedName = const Value.absent(),
                 Value<bool> isIdentified = const Value.absent(),
+                Value<String?> mergedToSpeciesId = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -2628,6 +2707,7 @@ class $$PlantEncounterTableTableTableManager
                 method: method,
                 userDefinedName: userDefinedName,
                 isIdentified: isIdentified,
+                mergedToSpeciesId: mergedToSpeciesId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

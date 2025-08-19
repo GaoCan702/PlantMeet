@@ -18,13 +18,15 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
   final _formKey = GlobalKey<FormState>();
   final _cloudApiUrlController = TextEditingController();
   final _cloudApiKeyController = TextEditingController();
-  final RecognitionService _recognitionService = RecognitionService();
+  late RecognitionService _recognitionService;
   bool _isApiKeyVisible = false;
   bool _isTesting = false;
 
   @override
   void initState() {
     super.initState();
+    // 使用 Provider 提供的单例服务
+    _recognitionService = Provider.of<RecognitionService>(context, listen: false);
     final appState = Provider.of<AppState>(context, listen: false);
     _settings = appState.settings ?? AppSettings();
     // 这里可以添加云端API的配置字段，目前先使用现有字段作为示例

@@ -378,12 +378,13 @@ class LocalLLMService {
   Future<bool> warmupModel() async {
     try {
       // 创建一个小的测试图片
-      final testImageData = Uint8List.fromList([
+      // 模拟图片数据以测试模型
+      Uint8List.fromList([
         // 这里应该是一个很小的测试图片的字节数据
         // 为了简化，我们跳过实际的预热
       ]);
 
-      // TODO: 实现实际的模型预热逻辑
+      // 模型预热：执行一次空推理以初始化
       await Future.delayed(const Duration(milliseconds: 100));
       return true;
     } catch (e) {

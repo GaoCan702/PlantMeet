@@ -1,34 +1,59 @@
 import 'dart:io';
-import 'dart:math';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:logger/logger.dart';
 import '../models/recognition_result.dart';
 import '../models/app_settings.dart';
-import 'mock_recognition_service.dart';
 import 'mnn_chat_service.dart';
 import 'embedded_model_service.dart';
 
 /// 植物识别服务 - 支持应用内模型、MNN Chat和云端识别的生活化植物识别
-class RecognitionService {
-  static const bool _useMockData = false; // 禁用模拟数据：缺少真实服务时直接中断
+/// 单例模式，确保全局只有一个识别服务实例
+class RecognitionService extends ChangeNotifier {
   static const bool _preferLocalLLM = true; // 优先使用本地大模型
 
+  // 单例实例
+  static RecognitionService? _instance;
+  
   final Logger _logger = Logger();
   MNNChatService? _mnnChatService;
   bool _isMNNChatReady = false;
 
   EmbeddedModelService? _embeddedModelService;
   bool _isEmbeddedModelReady = false;
+  bool _isInitialized = false;
 
-  RecognitionService({EmbeddedModelService? embeddedModelService}) {
+  // 私有构造函数
+  RecognitionService._internal({EmbeddedModelService? embeddedModelService}) {
     _embeddedModelService = embeddedModelService;
-    _initializeServices();
+  }
+  
+  // 工厂构造函数，返回单例
+  factory RecognitionService({EmbeddedModelService? embeddedModelService}) {
+    _instance ??= RecognitionService._internal(embeddedModelService: embeddedModelService);
+    
+    // 如果传入了新的 embeddedModelService，更新它
+    if (embeddedModelService != null && _instance!._embeddedModelService == null) {
+      _instance!._embeddedModelService = embeddedModelService;
+    }
+    
+    // 不在构造函数中初始化异步操作，改为在 initialize 方法中处理
+    
+    return _instance!;
   }
 
-  void initialize(AppSettings settings) async {
+  Future<void> initialize(AppSettings settings) async {
+    // 确保只初始化一次
+    if (_isInitialized) {
+      _logger.i('RecognitionService already initialized');
+      return;
+    }
+    
     // 初始化所有识别服务
     await _initializeServices();
+    _isInitialized = true;
   }
 
   /// 初始化所有识别服务
@@ -41,16 +66,35 @@ class RecognitionService {
     if (_embeddedModelService == null) return;
 
     try {
+      // 安全地添加状态监听器（避免重复添加）
+      _embeddedModelService!.removeListener(_onEmbeddedModelStatusChanged);
+      _embeddedModelService!.addListener(_onEmbeddedModelStatusChanged);
+      
+      // 检查模型状态（初始化时不自动加载，让它按需加载）
       _isEmbeddedModelReady = _embeddedModelService!.isModelReady;
 
       if (_isEmbeddedModelReady) {
         _logger.i('✅ 应用内 Gemma 3 Nano 4B 模型就绪');
+      } else if (_embeddedModelService!.isModelDownloaded) {
+        _logger.i('📦 应用内模型已下载，将在使用时自动加载');
       } else {
-        _logger.w('⚠️ 应用内模型未就绪，状态: ${_embeddedModelService!.state.status}');
+        _logger.w('⚠️ 应用内模型未下载，状态: ${_embeddedModelService!.state.status}');
       }
     } catch (e) {
-      _logger.e('❌ 应用内模型检查异常: $e');
+      _logger.e('❌ 应用内模型初始化异常: $e');
       _isEmbeddedModelReady = false;
+    }
+  }
+  
+  /// 监听应用内模型状态变化
+  void _onEmbeddedModelStatusChanged() {
+    if (_embeddedModelService == null) return;
+    
+    final wasReady = _isEmbeddedModelReady;
+    _isEmbeddedModelReady = _embeddedModelService!.isModelReady;
+    
+    if (wasReady != _isEmbeddedModelReady) {
+      _logger.i('📱 应用内模型状态更新: ${_isEmbeddedModelReady ? '就绪' : '未就绪'}');
     }
   }
 
@@ -90,25 +134,54 @@ class RecognitionService {
     bool quickMode = false,
     RecognitionMethod? preferredMethod,
   }) async {
+    print('🔧[RecognitionService] === 进入植物识别服务 ===');
+    print('📂[RecognitionService] 图片文件: ${imageFile.path}');
+    print('⚙️[RecognitionService] 参数: userContext=$userContext, season=$season, location=$location, quickMode=$quickMode');
+    print('🎯[RecognitionService] 首选方法: ${preferredMethod ?? settings.preferredRecognitionMethod}');
+    
     // 若无任何真实服务可用，直接中断，不使用模拟数据
-    final hasEmbedded = _isEmbeddedModelReady;
+    final hasEmbedded = (_embeddedModelService?.isModelReady ?? false) || 
+                       (_embeddedModelService?.isModelDownloaded ?? false);
     final hasMNN = _preferLocalLLM && _isMNNChatReady;
     final hasCloud = settings.isConfigured;
     final anyAvailable = hasEmbedded || hasMNN || hasCloud;
 
+    // 添加调试信息
+    print('🔍[RecognitionService] 识别服务状态检查:');
+    print('   - EmbeddedModel 就绪: ${_embeddedModelService?.isModelReady ?? false}');
+    print('   - EmbeddedModel 已下载: ${_embeddedModelService?.isModelDownloaded ?? false}');
+    print('   - EmbeddedModel 状态: ${_embeddedModelService?.state.status}');
+    print('   - EmbeddedModel 加载中: ${_embeddedModelService?.isModelLoading ?? false}');
+    print('   - EmbeddedModel 识别中: ${_embeddedModelService?.isRecognitionInProgress ?? false}');
+    print('   - MNN Chat 就绪: $_isMNNChatReady');
+    print('   - MNN Chat 偏好: $_preferLocalLLM');
+    print('   - Cloud 配置: ${settings.isConfigured}');
+    print('   - 任何服务可用: $anyAvailable');
+    
+    _logger.d('识别服务状态检查:');
+    _logger.d('  EmbeddedModel: ready=${_embeddedModelService?.isModelReady}, downloaded=${_embeddedModelService?.isModelDownloaded}, status=${_embeddedModelService?.state.status}');
+    _logger.d('  MNN Chat: ready=$_isMNNChatReady');
+    _logger.d('  Cloud: configured=${settings.isConfigured}');
+    _logger.d('  任何可用: $anyAvailable');
+
     if (!anyAvailable) {
+      final errorMsg = '没有可用的识别服务：请先下载并加载本地模型(状态: ${_embeddedModelService?.state.status})，或确保MNN Chat服务可用，或在云端配置API。';
+      print('❌[RecognitionService] $errorMsg');
       return RecognitionResponse.error(
-        error: '没有可用的识别服务：请先下载并加载本地模型，或确保MNN Chat服务可用，或在云端配置API。',
+        error: errorMsg,
         method: preferredMethod ?? settings.preferredRecognitionMethod,
       );
     }
 
     // 根据用户偏好或自动选择识别方法，支持回退机制
     final method = preferredMethod ?? settings.preferredRecognitionMethod;
+    print('📋[RecognitionService] 选定识别方法: $method');
+    print('🔄[RecognitionService] 回退顺序: ${settings.recognitionMethodFallbackOrder}');
 
     // 如果用户设置了智能识别，使用最佳可用方法
     if (method == RecognitionMethod.hybrid) {
-      return await _hybridRecognition(
+      print('🧠[RecognitionService] 使用混合智能识别模式');
+      final result = await _hybridRecognition(
         imageFile,
         settings,
         userContext: userContext,
@@ -116,9 +189,12 @@ class RecognitionService {
         location: location,
         quickMode: quickMode,
       );
+      print('🏁[RecognitionService] 混合识别完成: success=${result.success}, method=${result.method}');
+      return result;
     }
 
     // 尝试用户首选的方法，如果失败则按照设置的回退顺序尝试
+    print('🎯[RecognitionService] 使用指定方法识别: $method');
     final result = await _tryRecognitionWithFallback(
       imageFile,
       settings,
@@ -129,6 +205,12 @@ class RecognitionService {
       quickMode: quickMode,
     );
 
+    print('🏁[RecognitionService] 识别流程完成: success=${result.success}, method=${result.method}');
+    if (!result.success) {
+      print('❌[RecognitionService] 识别失败原因: ${result.error}');
+    } else {
+      print('✅[RecognitionService] 识别成功，结果数量: ${result.results.length}');
+    }
     return result;
   }
 
@@ -259,13 +341,56 @@ class RecognitionService {
     String? location,
     bool quickMode = false,
   }) async {
+    print('🔄[RecognitionService] 尝试识别方法: $method');
+    final stopwatch = Stopwatch()..start();
+    
     switch (method) {
       case RecognitionMethod.embedded:
-        if (_isEmbeddedModelReady) {
-          return await _tryEmbeddedModelRecognition(imageFile);
+        print('🔧[RecognitionService] 尝试使用应用内模型 (Embedded)');
+        print('   - 模型就绪: ${_embeddedModelService?.isModelReady ?? false}');
+        print('   - 模型已下载: ${_embeddedModelService?.isModelDownloaded ?? false}');
+        print('   - 模型状态: ${_embeddedModelService?.state.status}');
+        print('   - 模型加载中: ${_embeddedModelService?.isModelLoading ?? false}');
+        
+        // 实时检查模型状态，不依赖缓存
+        if (_embeddedModelService?.isModelReady ?? false) {
+          print('✅[RecognitionService] 模型已就绪，直接开始识别');
+          final result = await _tryEmbeddedModelRecognition(imageFile);
+          stopwatch.stop();
+          print('⏱️[RecognitionService] 应用内模型识别耗时: ${stopwatch.elapsedMilliseconds}ms');
+          return result;
         }
+        
+        // 如果模型已下载但未加载，尝试自动加载
+        if (_embeddedModelService != null && 
+            _embeddedModelService!.isModelDownloaded && 
+            !_embeddedModelService!.isModelReady) {
+          try {
+            print('🔄[RecognitionService] 模型已下载但未加载，正在按需加载...');
+            _logger.i('🔄 模型已下载但未加载，正在按需加载...');
+            await _embeddedModelService!.loadModel();
+            
+            if (_embeddedModelService!.isModelReady) {
+              print('✅[RecognitionService] 模型按需加载成功，开始识别...');
+              _logger.i('✅ 模型按需加载成功，开始识别...');
+              final result = await _tryEmbeddedModelRecognition(imageFile);
+              stopwatch.stop();
+              print('⏱️[RecognitionService] 应用内模型识别(含加载)耗时: ${stopwatch.elapsedMilliseconds}ms');
+              return result;
+            } else {
+              print('❌[RecognitionService] 模型加载后仍未就绪');
+            }
+          } catch (e) {
+            print('💥[RecognitionService] 模型按需加载失败: $e');
+            _logger.e('❌ 模型按需加载失败: $e');
+          }
+        }
+        
+        final errorMsg = '应用内模型未就绪，状态: ${_embeddedModelService?.state.status ?? '未知'}';
+        print('❌[RecognitionService] $errorMsg');
+        stopwatch.stop();
         return RecognitionResponse.error(
-          error: '应用内模型未就绪',
+          error: errorMsg,
           method: RecognitionMethod.embedded,
         );
 
@@ -331,17 +456,41 @@ class RecognitionService {
   Future<RecognitionResponse> _tryEmbeddedModelRecognition(
     File imageFile,
   ) async {
-    if (_embeddedModelService == null || !_isEmbeddedModelReady) {
+    if (_embeddedModelService == null) {
       return RecognitionResponse.error(
-        error: '应用内模型未就绪',
+        error: '应用内模型服务未初始化',
+        method: RecognitionMethod.embedded,
+      );
+    }
+
+    // 实时检查模型状态，不依赖缓存的 _isEmbeddedModelReady
+    if (!_embeddedModelService!.isModelReady) {
+      return RecognitionResponse.error(
+        error: '应用内模型未就绪，当前状态: ${_embeddedModelService!.state.status}',
         method: RecognitionMethod.embedded,
       );
     }
 
     try {
-      final startTime = DateTime.now();
-      final results = await _embeddedModelService!.recognizePlant(imageFile);
-      final inferenceTime = DateTime.now().difference(startTime);
+      _logger.i('🔄 开始植物识别，初次加载可能需要较长时间...');
+      
+      // 增加超时时间，因为Gemma模型初次加载很慢
+      final results = await _embeddedModelService!.recognizePlant(imageFile)
+          .timeout(
+            const Duration(minutes: 3), // 3分钟超时
+            onTimeout: () {
+              _logger.w('⏰ 植物识别超时，可能是模型初次加载时间过长');
+              throw TimeoutException('植物识别超时，模型初次加载需要较长时间，请稍后重试', const Duration(minutes: 3));
+            },
+          );
+
+      // 如果结果为空，表示图片中没有植物
+      if (results.isEmpty) {
+        return RecognitionResponse.error(
+          error: '图片中未检测到植物，请确保照片中包含植物并重试',
+          method: RecognitionMethod.embedded,
+        );
+      }
 
       // 转换为生活化的RecognitionResult格式
       final convertedResults = results
@@ -360,6 +509,14 @@ class RecognitionService {
         method: RecognitionMethod.embedded,
       );
     } catch (e) {
+      if (e is TimeoutException) {
+        _logger.w('⏰ 植物识别超时: ${e.message}');
+        return RecognitionResponse.error(
+          error: '识别超时：模型初次加载需要较长时间（约1-3分钟），请耐心等待或稍后重试',
+          method: RecognitionMethod.embedded,
+        );
+      }
+      
       return RecognitionResponse.error(
         error: '应用内模型识别异常: $e',
         method: RecognitionMethod.embedded,
@@ -431,11 +588,11 @@ class RecognitionService {
 
       // 添加MNN Chat的特殊标识
       if (result.success && result.results.isNotEmpty) {
-        result.results.forEach((plant) {
+        for (final plant in result.results) {
           plant.tags.add('MNN Chat');
           plant.tags.add('Qwen2.5-VL-3B');
           if (quickMode) plant.tags.add('快速模式');
-        });
+        }
       }
 
       return result;
@@ -459,35 +616,6 @@ class RecognitionService {
         error: '云端识别失败: $e',
         method: RecognitionMethod.cloud,
       );
-    }
-  }
-
-  /// 模拟识别结果（开发阶段）
-  Future<RecognitionResponse> _getMockRecognitionResult(File imageFile) async {
-    // 模拟网络延迟
-    await Future.delayed(const Duration(seconds: 2));
-
-    // 模拟不同的识别结果
-    final random = Random();
-    final scenarios = [
-      'sunflower',
-      'rose',
-      'cactus',
-      'bamboo',
-      'common',
-      'error',
-      'empty',
-    ];
-
-    final scenario = scenarios[random.nextInt(scenarios.length)];
-
-    switch (scenario) {
-      case 'error':
-        return MockRecognitionService.generateErrorResponse();
-      case 'empty':
-        return MockRecognitionService.generateEmptyResponse();
-      default:
-        return MockRecognitionService.generateMockResponse(plantType: scenario);
     }
   }
 
@@ -592,6 +720,8 @@ class RecognitionService {
       }
     }
 
+    // 极简输出模型不提供养护信息，返回null
+    // UI层应该适当处理null情况
     return null;
   }
 
@@ -653,7 +783,7 @@ class RecognitionService {
   Map<String, dynamic> getRecognitionMethodsStatus([AppSettings? settings]) {
     final result = {
       'embedded_model': {
-        'available': _isEmbeddedModelReady,
+        'available': _embeddedModelService?.isModelReady ?? false,
         'status': _embeddedModelService?.state.status.toString(),
         'model_info': _embeddedModelService?.modelInfo?.toJson(),
         'device_capability':
@@ -689,14 +819,23 @@ class RecognitionService {
 
   /// 刷新服务状态
   Future<void> refreshStatus() async {
-    await _initializeServices();
+    // 如果服务还未初始化，先初始化
+    if (!_isInitialized) {
+      await _initializeServices();
+      _isInitialized = true;
+    } else {
+      // 如果已初始化，只刷新状态
+      await _initializeServices();
+    }
   }
 
   /// 获取可用的识别方法列表
   List<RecognitionMethod> getAvailableMethods() {
     final methods = <RecognitionMethod>[];
 
-    if (_isEmbeddedModelReady) {
+    // 应用内模型：如果已就绪或已下载（可按需加载），则认为可用
+    if ((_embeddedModelService?.isModelReady ?? false) || 
+        (_embeddedModelService?.isModelDownloaded ?? false)) {
       methods.add(RecognitionMethod.embedded);
     }
 
@@ -714,13 +853,16 @@ class RecognitionService {
   bool isMethodAvailable(RecognitionMethod method) {
     switch (method) {
       case RecognitionMethod.embedded:
-        return _isEmbeddedModelReady;
+        return (_embeddedModelService?.isModelReady ?? false) || 
+               (_embeddedModelService?.isModelDownloaded ?? false);
       case RecognitionMethod.local:
         return _isMNNChatReady;
       case RecognitionMethod.cloud:
         return true; // 云端总是可用（如果配置了）
       case RecognitionMethod.hybrid:
-        return _isEmbeddedModelReady || _isMNNChatReady;
+        final hasEmbedded = (_embeddedModelService?.isModelReady ?? false) || 
+                           (_embeddedModelService?.isModelDownloaded ?? false);
+        return hasEmbedded || _isMNNChatReady;
       case RecognitionMethod.manual:
         return true; // 手动输入总是可用
       case RecognitionMethod.none:
@@ -764,14 +906,19 @@ class RecognitionService {
     }
   }
 
+  @override
   void dispose() {
     // 清理资源
     _mnnChatService?.dispose();
     _mnnChatService = null;
     _isMNNChatReady = false;
 
-    _embeddedModelService?.dispose();
+    // 移除应用内模型状态监听器
+    _embeddedModelService?.removeListener(_onEmbeddedModelStatusChanged);
+    // 不要dispose外部传入的embeddedModelService，只清除引用
     _embeddedModelService = null;
     _isEmbeddedModelReady = false;
+    
+    super.dispose();
   }
 }

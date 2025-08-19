@@ -7,7 +7,7 @@ import '../services/permission_service.dart';
 import '../services/recognition_service.dart';
 import '../models/index.dart';
 import '../widgets/copyable_error_message.dart';
-import 'quick_record_screen_v2.dart';
+import 'quick_record_screen_v3.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -19,7 +19,7 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   final ImagePicker _picker = ImagePicker();
   final PermissionService _permissionService = PermissionService();
-  final RecognitionService _recognitionService = RecognitionService();
+  late RecognitionService _recognitionService;
   String? _imagePath;
   bool _isProcessing = false;
   bool _hasPermissions = false;
@@ -27,13 +27,9 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   void initState() {
     super.initState();
+    // 使用 Provider 提供的单例服务
+    _recognitionService = Provider.of<RecognitionService>(context, listen: false);
     _checkPermissions();
-    _initializeRecognitionService();
-  }
-
-  void _initializeRecognitionService() {
-    final appState = Provider.of<AppState>(context, listen: false);
-    _recognitionService.initialize(appState.settings ?? AppSettings());
   }
 
   Future<void> _checkPermissions() async {
@@ -128,11 +124,13 @@ class _CameraScreenState extends State<CameraScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => QuickRecordScreenV2(imagePath: imagePath),
+                    builder: (context) => QuickRecordScreenV3(imagePath: imagePath),
                   ),
                 ).then((_) {
                   // 返回后关闭相机页面
-                  Navigator.pop(context);
+                  if (mounted) {
+                    Navigator.pop(context);
+                  }
                 });
               },
             ),
@@ -234,34 +232,6 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  void _showRecognitionServiceRequiredDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('需要配置识别服务'),
-        content: const Text(
-          '当前没有可用的植物识别服务。请：\n\n'
-          '• 下载应用内AI模型进行离线识别\n'
-          '• 启动MNN Chat进行本地识别\n'
-          '• 配置云端API密钥\n\n'
-          '至少需要配置一种方法才能进行植物识别。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/settings');
-            },
-            child: const Text('去设置'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showError(String message) {
     ErrorSnackBar.show(context, message: message, title: '错误');
@@ -353,7 +323,9 @@ class _CameraScreenState extends State<CameraScreen> {
       await appState.addRecognitionResult(species, encounter);
 
       _showSuccess('识别完成！已识别为: ${topResult.name}');
-      Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+      }
     } catch (e) {
       _showError('识别失败: $e');
     } finally {
@@ -404,7 +376,7 @@ class _CameraScreenState extends State<CameraScreen> {
       body: Column(
         children: [
           Expanded(
-            child: Container(
+            child: SizedBox(
               width: double.infinity,
               child: _imagePath == null
                   ? _buildPermissionUI()

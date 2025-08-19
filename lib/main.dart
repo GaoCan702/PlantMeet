@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen_v2.dart';
-import 'screens/camera_screen.dart';
+import 'screens/camera_screen_v2.dart';
 import 'screens/settings_screen.dart';
 import 'screens/plant_detail_screen_v2.dart';
 import 'screens/gallery_screen.dart';
@@ -16,11 +16,13 @@ import 'services/app_state.dart';
 import 'services/database_service.dart';
 import 'services/database.dart';
 import 'services/onboarding_service.dart';
+import 'models/app_settings.dart';
 import 'services/embedded_model_service.dart';
 import 'services/model_storage_manager.dart';
 import 'services/device_capability_detector.dart';
 import 'services/simple_model_downloader.dart';
 import 'services/gemma_inference_service.dart';
+import 'services/recognition_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +51,11 @@ void main() async {
 
   // 仅初始化应用状态，延后模型初始化
   await appState.initialize();
+  
+  // 创建统一的识别服务（单例）
+  final recognitionService = RecognitionService(
+    embeddedModelService: embeddedModelService,
+  );
 
   // 检查是否显示新手引导
   final hasSeenOnboarding = await OnboardingService.hasSeenOnboarding();
@@ -58,14 +65,16 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (context) => appState),
         ChangeNotifierProvider(create: (context) => embeddedModelService),
+        ChangeNotifierProvider(create: (context) => recognitionService),
       ],
       child: PlantMeetApp(hasSeenOnboarding: hasSeenOnboarding),
     ),
   );
 
-  // 首帧渲染后再初始化本地模型服务，避免阻塞冷启动
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    embeddedModelService.initialize();
+  // 首帧渲染后再初始化本地模型服务和识别服务，避免阻塞冷启动
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    await embeddedModelService.initialize();
+    await recognitionService.initialize(appState.settings ?? AppSettings());
   });
 }
 
@@ -111,7 +120,7 @@ class PlantMeetApp extends StatelessWidget {
       initialRoute: hasSeenOnboarding ? '/home' : '/onboarding',
       routes: {
         '/home': (context) => const HomeScreenV2(),
-        '/camera': (context) => const CameraScreen(),
+        '/camera': (context) => const CameraScreenV2(),
         '/settings': (context) => const SettingsScreen(),
         '/gallery': (context) => const GalleryScreen(),
         '/onboarding': (context) => const OnboardingScreen(),

@@ -66,8 +66,7 @@ class _UnidentifiedPlantDetailScreenV2State extends State<UnidentifiedPlantDetai
 
     try {
       final appState = Provider.of<AppState>(context, listen: false);
-      final recognitionService = RecognitionService();
-      recognitionService.updateSettings(appState.settings!);
+      final recognitionService = Provider.of<RecognitionService>(context, listen: false);
       
       final imageFile = File(widget.encounter.photoPaths.first);
       final result = await recognitionService.identifyPlant(
@@ -590,14 +589,7 @@ class _UnidentifiedPlantDetailScreenV2State extends State<UnidentifiedPlantDetai
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () {
-                            // TODO: 添加更多照片
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('功能开发中'),
-                              ),
-                            );
-                          },
+                          onPressed: null, // 功能暂未开放
                           icon: const Icon(Icons.add_a_photo),
                           label: const Text('添加照片'),
                           style: OutlinedButton.styleFrom(
@@ -611,14 +603,7 @@ class _UnidentifiedPlantDetailScreenV2State extends State<UnidentifiedPlantDetai
                       const SizedBox(width: 12),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () {
-                            // TODO: 分享功能
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('功能开发中'),
-                              ),
-                            );
-                          },
+                          onPressed: null, // 分享功能已在AppBar实现
                           icon: const Icon(Icons.share),
                           label: const Text('分享'),
                           style: OutlinedButton.styleFrom(

@@ -549,7 +549,7 @@ class _QuickRecordScreenState extends State<QuickRecordScreen> {
                       right: 8,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.6),
+                          color: Colors.black.withAlpha(153),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: IconButton(

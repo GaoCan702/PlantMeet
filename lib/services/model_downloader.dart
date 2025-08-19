@@ -279,7 +279,7 @@ class ModelDownloader {
 
   int _getExpectedFileSize(String fileName) {
     if (fileName == 'gemma-3n-E4B-it-int4.task') {
-      return 4405655031; // 4.10GB LiteRT 任务文件
+      return 4405655031; // 4.1GB LiteRT 任务文件 (E4B)
     } else if (fileName == 'model.tflite') {
       return 2000 * 1024 * 1024; // 2GB 传统模型
     } else if (fileName == 'tokenizer.json') {

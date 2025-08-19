@@ -203,7 +203,11 @@ class AppState extends ChangeNotifier {
   }
 
   List<PlantEncounter> getEncountersForSpecies(String speciesId) {
-    return _encounters.where((e) => e.speciesId == speciesId).toList();
+    // 获取直接属于该物种的记录，或者被手动归类到该物种的记录
+    return _encounters.where((e) => 
+      e.speciesId == speciesId || 
+      e.mergedToSpeciesId == speciesId
+    ).toList();
   }
   
   // 添加未识别的植物遇见记录
@@ -229,6 +233,35 @@ class AppState extends ChangeNotifier {
   // 获取所有遇见记录（包括已识别和未识别）
   List<PlantEncounter> getAllEncounters() {
     return _encounters..sort((a, b) => b.encounterDate.compareTo(a.encounterDate));
+  }
+  
+  // 手动归类遇见记录到指定物种
+  Future<void> mergeEncounterToSpecies(String encounterId, String targetSpeciesId) async {
+    _setLoading(true);
+    try {
+      // 找到要更新的遇见记录
+      final encounterIndex = _encounters.indexWhere((e) => e.id == encounterId);
+      if (encounterIndex == -1) {
+        throw Exception('Encounter not found');
+      }
+      
+      final encounter = _encounters[encounterIndex];
+      final updatedEncounter = encounter.copyWith(
+        mergedToSpeciesId: targetSpeciesId,
+        isIdentified: true,
+        updatedAt: DateTime.now(),
+      );
+      
+      // 更新数据库
+      await databaseService.updateEncounter(updatedEncounter);
+      
+      // 重新加载数据
+      await _loadData();
+    } catch (e) {
+      _setError('Failed to merge encounter: $e');
+    } finally {
+      _setLoading(false);
+    }
   }
   
   // 更新未识别植物为已识别

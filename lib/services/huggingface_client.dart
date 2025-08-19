@@ -50,7 +50,7 @@ class HuggingFaceClient {
         version: data['sha'] ?? 'latest',
         description:
             'Google Gemma 3 Nano multimodal model optimized for mobile devices with vision support (LiteRT)',
-        sizeBytes: 4405655031, // 4.10GB 准确大小
+        sizeBytes: 4405655031, // 4.1GB 准确大小 (E4B)
         requiredFiles: ['gemma-3n-E4B-it-int4.task'], // LiteRT 任务文件
         metadata: {
           'author': 'Google',
@@ -91,7 +91,7 @@ class HuggingFaceClient {
 
       // Gemma 3n E4B LiteRT Preview 使用单个 .task 文件
       final requiredFiles = [
-        'gemma-3n-E4B-it-int4.task', // 4.41GB LiteRT 任务文件
+        'gemma-3n-E4B-it-int4.task', // 4.1GB LiteRT 任务文件
       ];
 
       final modelFiles = <ModelFile>[];
@@ -213,7 +213,7 @@ class HuggingFaceClient {
   /// 估算文件大小
   int _estimateFileSize(String fileName) {
     if (fileName == 'gemma-3n-E4B-it-int4.task') {
-      return 4405655031; // 4.10GB 准确大小
+      return 4405655031; // 4.1GB 准确大小 (E4B)
     }
     if (fileName.endsWith('.json')) {
       return 2048; // ~2KB JSON配置文件
@@ -223,7 +223,7 @@ class HuggingFaceClient {
 
   /// 估算模型总大小
   int _estimateModelSize() {
-    return 4405655031; // 4.10GB LiteRT 任务文件准确大小
+    return 4405655031; // 4.1GB LiteRT 任务文件准确大小 (E4B)
   }
 
   /// 获取默认模型信息（降级处理）
@@ -271,7 +271,7 @@ class HuggingFaceClient {
     return [
       ModelFile(
         name: 'gemma-3n-E4B-it-int4.task',
-        size: 4405655031, // 4.10GB 准确大小
+        size: 4405655031, // 4.1GB 准确大小
         downloadUrl:
             '$_baseUrl/$_modelId/resolve/main/gemma-3n-E4B-it-int4.task',
         checksum: null,

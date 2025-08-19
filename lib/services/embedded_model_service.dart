@@ -28,6 +28,12 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
   // 指数退避
   int _retryAttempt = 0;
   Timer? _retryTimer;
+  
+  // 智能模型释放机制
+  Timer? _modelReleaseTimer;
+  Timer? _backgroundReleaseTimer;
+  Timer? _memoryPressureTimer;
+  DateTime? _lastModelUsage;
 
   EmbeddedModelState _state = EmbeddedModelState(
     status: ModelStatus.notDownloaded,
@@ -210,16 +216,45 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// 公开的加载模型方法
+  Future<void> loadModel() async {
+    if (_state.status == ModelStatus.ready) {
+      _logger.i('Model already loaded and ready');
+      return;
+    }
+    
+    if (!isModelDownloaded) {
+      _logger.w('Cannot load model: Model not downloaded');
+      throw Exception('Model not downloaded');
+    }
+    
+    await _tryLoadModel();
+  }
+
   Future<void> _tryLoadModel() async {
+    print('🔄[EmbeddedModelService] === 开始加载模型 ===');
+    final loadStopwatch = Stopwatch()..start();
+    
     try {
+      print('📊[EmbeddedModelService] 更新状态为: loading');
       _updateState(_state.copyWith(status: ModelStatus.loading));
 
+      print('🚀[EmbeddedModelService] 调用推理服务初始化模型...');
       await _inferenceService.initializeModel();
 
+      print('🔍[EmbeddedModelService] 检查模型是否就绪...');
       if (await _inferenceService.isModelReady()) {
+        loadStopwatch.stop();
+        print('✅[EmbeddedModelService] 模型加载成功！耗时: ${loadStopwatch.elapsedMilliseconds}ms');
+        print('📊[EmbeddedModelService] 更新状态为: ready');
         _updateState(_state.copyWith(status: ModelStatus.ready));
+        _scheduleModelRelease(); // 启动智能释放调度
+        _startMemoryPressureMonitoring(); // 启动内存压力监控
         _logger.i('Model loaded and ready for inference');
+        print('🎯[EmbeddedModelService] 模型管理功能已启动');
       } else {
+        loadStopwatch.stop();
+        print('❌[EmbeddedModelService] 模型初始化后未就绪，耗时: ${loadStopwatch.elapsedMilliseconds}ms');
         throw Exception('Model failed to initialize');
       }
     } catch (e, stackTrace) {
@@ -297,19 +332,49 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<List<RecognitionResult>> recognizePlant(File imageFile) async {
+    print('🚀[EmbeddedModelService] === 开始植物识别 ===');
+    print('📂[EmbeddedModelService] 图片文件: ${imageFile.path}');
+    print('📊[EmbeddedModelService] 当前模型状态: ${_state.status}');
+    print('🔧[EmbeddedModelService] 模型就绪: ${_state.status == ModelStatus.ready}');
+    print('⚡[EmbeddedModelService] 推理服务状态: 加载中=${_inferenceService.isModelLoading}, 识别中=${_inferenceService.isRecognitionInProgress}');
+    
     // 如果模型未加载，先尝试加载
     if (_state.status == ModelStatus.downloaded) {
+      print('🔄[EmbeddedModelService] 模型已下载但未加载，正在自动加载...');
       await ensureModelLoaded();
     }
 
     if (_state.status != ModelStatus.ready) {
-      throw Exception('Model is not ready. Current status: ${_state.status}');
+      final errorMsg = 'Model is not ready. Current status: ${_state.status}';
+      print('❌[EmbeddedModelService] $errorMsg');
+      throw Exception(errorMsg);
     }
 
+    print('✅[EmbeddedModelService] 模型已就绪，开始调用推理服务...');
+    final stopwatch = Stopwatch()..start();
+    
     try {
-      return await _inferenceService.recognizePlant(imageFile);
-    } catch (e) {
+      _recordModelUsage(); // 记录模型使用
+      notifyListeners(); // 通知UI状态变化
+      print('🔧[EmbeddedModelService] 调用 GemmaInferenceService.recognizePlant()...');
+      final result = await _inferenceService.recognizePlant(imageFile);
+      stopwatch.stop();
+      print('⏱️[EmbeddedModelService] 推理耗时: ${stopwatch.elapsedMilliseconds}ms');
+      print('📋[EmbeddedModelService] 识别结果数量: ${result.length}');
+      
+      for (int i = 0; i < result.length; i++) {
+        print('🌿[EmbeddedModelService] 结果 ${i + 1}: ${result[i].name} (置信度: ${result[i].confidence})');
+      }
+      
+      notifyListeners(); // 识别完成后通知UI
+      print('✅[EmbeddedModelService] 植物识别完成');
+      return result;
+    } catch (e, stackTrace) {
+      stopwatch.stop();
+      print('💥[EmbeddedModelService] 植物识别失败: $e');
+      print('📍[EmbeddedModelService] 堆栈跟踪: $stackTrace');
       _logger.e('Plant recognition failed: $e');
+      notifyListeners(); // 出错后也要通知UI
       rethrow;
     }
   }
@@ -327,6 +392,7 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
       throw Exception('模型未就绪，当前状态: ${_getStatusDescription(_state.status)}。请返回模型管理页面检查模型状态。');
     }
 
+    _recordModelUsage(); // 记录模型使用
     return _inferenceService.chat(prompt: prompt, imageFile: imageFile);
   }
 
@@ -347,6 +413,7 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
         throw Exception('模型未就绪，当前状态: ${_getStatusDescription(_state.status)}。请返回模型管理页面检查模型状态。');
       }
 
+      _recordModelUsage(); // 记录模型使用
       yield* _inferenceService.chatStream(prompt: prompt, imageFile: imageFile);
     } catch (e) {
       // 如果是模型初始化相关错误，提供更友好的提示
@@ -381,6 +448,10 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> deleteModel() async {
     try {
       _logger.i('Deleting model...');
+      
+      // Cancel any scheduled model release
+      _cancelModelRelease();
+      _stopMemoryPressureMonitoring();
 
       // Unload model from memory first
       await _inferenceService.unloadModel();
@@ -434,9 +505,10 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  // 生命周期回调：前后台切换时暂停/恢复下载
+  // 生命周期回调：前后台切换时暂停/恢复下载，并优化内存使用
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 处理下载相关的生命周期
     if (_state.status == ModelStatus.downloading) {
       if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
         _maybePauseForBackground();
@@ -444,6 +516,32 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
         // 回到前台尝试续传
         _tryResumeDownload();
       }
+    }
+    
+    // 处理模型内存释放相关的生命周期
+    _handleModelMemoryLifecycle(state);
+  }
+  
+  /// 处理模型内存管理的生命周期
+  void _handleModelMemoryLifecycle(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        // 延迟释放模型（给用户30秒返回前台的机会）
+        _scheduleBackgroundModelRelease();
+        break;
+      case AppLifecycleState.resumed:
+        // 取消后台释放调度
+        _cancelBackgroundModelRelease();
+        break;
+      case AppLifecycleState.detached:
+        // 应用被终止，立即释放模型
+        _releaseModelImmediately();
+        break;
+      case AppLifecycleState.hidden:
+        // 应用被隐藏但可能快速恢复，稍作延迟
+        _scheduleBackgroundModelRelease();
+        break;
     }
   }
 
@@ -634,6 +732,49 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
     };
   }
 
+  /// 获取详细的资源状态信息（用于UI显示）
+  Map<String, dynamic> getResourceStatus() {
+    final config = _getDeviceConfig();
+    final now = DateTime.now();
+    
+    // 计算距离上次使用的时间
+    Duration? timeSinceLastUse;
+    if (_lastModelUsage != null) {
+      timeSinceLastUse = now.difference(_lastModelUsage!);
+    }
+    
+    // 计算下次自动释放的时间
+    Duration? timeUntilAutoRelease;
+    if (_state.status == ModelStatus.ready && _lastModelUsage != null) {
+      final autoReleaseTime = _lastModelUsage!.add(config.idleReleaseDelay);
+      if (autoReleaseTime.isAfter(now)) {
+        timeUntilAutoRelease = autoReleaseTime.difference(now);
+      }
+    }
+    
+    return {
+      'device_tier': config.deviceTier,
+      'model_status': _getStatusDescription(_state.status),
+      'model_loaded': _state.status == ModelStatus.ready,
+      'last_usage': _lastModelUsage?.toIso8601String(),
+      'time_since_last_use_minutes': timeSinceLastUse?.inMinutes,
+      'time_until_auto_release_minutes': timeUntilAutoRelease?.inMinutes,
+      'auto_release_enabled': _modelReleaseTimer != null,
+      'memory_monitoring_enabled': _memoryPressureTimer != null,
+      'background_release_scheduled': _backgroundReleaseTimer != null,
+      'optimization_config': {
+        'idle_release_delay_minutes': config.idleReleaseDelay.inMinutes,
+        'memory_check_interval_seconds': config.memoryCheckInterval.inSeconds,
+        'memory_pressure_release_enabled': config.enableMemoryPressureRelease,
+        'memory_pressure_threshold_minutes': config.memoryPressureThreshold.inMinutes,
+      },
+      'memory_info': {
+        'device_ram_gb': (_state.capability?.ramSizeBytes ?? 0) / (1024 * 1024 * 1024),
+        'ram_size_bytes': _state.capability?.ramSizeBytes ?? 0,
+      },
+    };
+  }
+
   Future<Duration> testInferenceSpeed() async {
     if (_state.status != ModelStatus.ready) {
       throw Exception('Model is not ready for testing');
@@ -664,6 +805,10 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _modelReleaseTimer?.cancel();
+    _backgroundReleaseTimer?.cancel();
+    _memoryPressureTimer?.cancel();
+    _retryTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _inferenceService.dispose();
     super.dispose();
@@ -677,6 +822,8 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
   bool get isDownloading => _state.status == ModelStatus.downloading;
   bool get hasError => _state.status == ModelStatus.error;
   String? get errorMessage => _state.errorMessage;
+  bool get isRecognitionInProgress => _inferenceService.isRecognitionInProgress;
+  bool get isModelLoading => _inferenceService.isModelLoading;
   double get downloadProgress => _state.downloadProgress;
   
   /// 判断下载是否处于暂停状态
@@ -691,8 +838,238 @@ class EmbeddedModelService extends ChangeNotifier with WidgetsBindingObserver {
   ModelInfo? get modelInfo => _state.modelInfo;
   DeviceCapability? get deviceCapability => _state.capability;
 
+  // 智能模型释放机制
+  
+  /// 记录模型使用并重置释放计时器
+  void _recordModelUsage() {
+    _lastModelUsage = DateTime.now();
+    _scheduleModelRelease();
+  }
+  
+  /// 根据设备性能获取释放延迟时间
+  Duration _getModelReleaseDelay() {
+    final config = _getDeviceConfig();
+    return config.idleReleaseDelay;
+  }
+  
+  /// 获取设备分级配置
+  DeviceConfig _getDeviceConfig() {
+    final ramSize = _state.capability?.ramSizeBytes ?? (4 * 1024 * 1024 * 1024);
+    
+    if (ramSize >= 8 * 1024 * 1024 * 1024) {
+      // 高端设备 (8GB+)
+      return DeviceConfig.highEnd();
+    } else if (ramSize >= 6 * 1024 * 1024 * 1024) {
+      // 中端设备 (6-8GB)
+      return DeviceConfig.midRange();
+    } else {
+      // 低端设备 (4-6GB)
+      return DeviceConfig.lowEnd();
+    }
+  }
+  
+  /// 调度模型自动释放
+  void _scheduleModelRelease() {
+    _modelReleaseTimer?.cancel();
+    
+    // 只有在模型已加载时才调度释放
+    if (_state.status != ModelStatus.ready) return;
+    
+    final delay = _getModelReleaseDelay();
+    _modelReleaseTimer = Timer(delay, () async {
+      try {
+        _logger.i('Auto-releasing model after ${delay.inMinutes} minutes of inactivity');
+        await _inferenceService.unloadModel();
+        
+        _updateState(_state.copyWith(
+          status: ModelStatus.downloaded,
+        ));
+        
+        _logger.i('Model auto-released successfully');
+      } catch (e) {
+        _logger.w('Failed to auto-release model: $e');
+      }
+    });
+    
+    _logger.d('Scheduled model release in ${delay.inMinutes} minutes');
+  }
+  
+  /// 取消模型释放调度
+  void _cancelModelRelease() {
+    _modelReleaseTimer?.cancel();
+    _logger.d('Cancelled model auto-release schedule');
+  }
+
+  // 后台模型释放机制
+  
+  /// 调度后台模型释放（30秒后释放）
+  void _scheduleBackgroundModelRelease() {
+    // 如果模型没有加载，无需释放
+    if (_state.status != ModelStatus.ready) return;
+    
+    _backgroundReleaseTimer?.cancel();
+    _backgroundReleaseTimer = Timer(const Duration(seconds: 30), () async {
+      try {
+        _logger.i('Releasing model due to background state');
+        await _inferenceService.unloadModel();
+        
+        _updateState(_state.copyWith(
+          status: ModelStatus.downloaded,
+        ));
+        
+        _logger.i('Model released successfully for background optimization');
+      } catch (e) {
+        _logger.w('Failed to release model in background: $e');
+      }
+    });
+    
+    _logger.d('Scheduled background model release in 30 seconds');
+  }
+  
+  /// 取消后台模型释放调度
+  void _cancelBackgroundModelRelease() {
+    _backgroundReleaseTimer?.cancel();
+    _logger.d('Cancelled background model release schedule');
+  }
+  
+  /// 立即释放模型（用于应用终止）
+  void _releaseModelImmediately() {
+    if (_state.status != ModelStatus.ready) return;
+    
+    // 同步调用，不使用async
+    try {
+      _logger.w('Immediately releasing model due to app termination');
+      _inferenceService.unloadModel().catchError((e) {
+        _logger.e('Failed to immediately release model: $e');
+      });
+      
+      // 直接更新状态，不等待unload完成
+      _updateState(_state.copyWith(
+        status: ModelStatus.downloaded,
+      ));
+    } catch (e) {
+      _logger.e('Error during immediate model release: $e');
+    }
+  }
+
+  // 内存压力感知释放机制
+  
+  /// 启动内存压力监控
+  void _startMemoryPressureMonitoring() {
+    _stopMemoryPressureMonitoring(); // 先停止之前的监控
+    
+    final config = _getDeviceConfig();
+    
+    // 根据设备性能调整监控频率
+    _memoryPressureTimer = Timer.periodic(config.memoryCheckInterval, (_) async {
+      await _checkMemoryPressure();
+    });
+    
+    _logger.d('Started memory pressure monitoring with ${config.memoryCheckInterval.inSeconds}s interval for ${config.deviceTier} device');
+  }
+  
+  /// 停止内存压力监控
+  void _stopMemoryPressureMonitoring() {
+    _memoryPressureTimer?.cancel();
+    _memoryPressureTimer = null;
+    _logger.d('Stopped memory pressure monitoring');
+  }
+  
+  /// 检查内存压力并决定是否释放模型
+  Future<void> _checkMemoryPressure() async {
+    if (_state.status != ModelStatus.ready) return;
+    
+    try {
+      final config = _getDeviceConfig();
+      final now = DateTime.now();
+      final lastUsage = _lastModelUsage;
+      
+      // 检查是否应该基于设备配置进行内存压力释放
+      if (config.enableMemoryPressureRelease && lastUsage != null) {
+        final inactiveTime = now.difference(lastUsage);
+        
+        if (inactiveTime >= config.memoryPressureThreshold) {
+          _logger.i('Memory pressure release triggered for ${config.deviceTier} device after ${inactiveTime.inMinutes} minutes of inactivity');
+          await _releaseModelDueToMemoryPressure();
+        }
+      }
+      
+    } catch (e) {
+      _logger.w('Memory pressure check failed: $e');
+    }
+  }
+  
+  /// 由于内存压力释放模型
+  Future<void> _releaseModelDueToMemoryPressure() async {
+    try {
+      _logger.i('Releasing model due to memory pressure');
+      
+      // 停止所有其他释放计时器，避免重复释放
+      _cancelModelRelease();
+      _cancelBackgroundModelRelease();
+      
+      await _inferenceService.unloadModel();
+      
+      _updateState(_state.copyWith(
+        status: ModelStatus.downloaded,
+      ));
+      
+      _logger.i('Model released successfully due to memory pressure');
+      
+      // 停止内存压力监控，直到模型下次被加载
+      _stopMemoryPressureMonitoring();
+      
+    } catch (e) {
+      _logger.w('Failed to release model due to memory pressure: $e');
+    }
+  }
+
   // 下载策略读取（与设置页使用相同的 key）
   static const _prefsAllowBackgroundKey = 'allow_background_download';
   static const _prefsWifiOnlyKey = 'wifi_only_download';
   static const _prefsAutoPauseLowBatteryKey = 'auto_pause_low_battery';
+}
+
+/// 设备分级配置类
+class DeviceConfig {
+  final String deviceTier;
+  final Duration idleReleaseDelay;
+  final Duration memoryCheckInterval;
+  final bool enableMemoryPressureRelease;
+  final Duration memoryPressureThreshold;
+  
+  const DeviceConfig({
+    required this.deviceTier,
+    required this.idleReleaseDelay,
+    required this.memoryCheckInterval,
+    required this.enableMemoryPressureRelease,
+    required this.memoryPressureThreshold,
+  });
+  
+  /// 高端设备配置 (8GB+)
+  factory DeviceConfig.highEnd() => const DeviceConfig(
+    deviceTier: 'high-end',
+    idleReleaseDelay: Duration(minutes: 5),
+    memoryCheckInterval: Duration(minutes: 1),
+    enableMemoryPressureRelease: false, // 高端设备不需要激进的内存管理
+    memoryPressureThreshold: Duration(minutes: 10),
+  );
+  
+  /// 中端设备配置 (6-8GB)
+  factory DeviceConfig.midRange() => const DeviceConfig(
+    deviceTier: 'mid-range',
+    idleReleaseDelay: Duration(minutes: 3),
+    memoryCheckInterval: Duration(seconds: 45),
+    enableMemoryPressureRelease: true,
+    memoryPressureThreshold: Duration(minutes: 3),
+  );
+  
+  /// 低端设备配置 (4-6GB)
+  factory DeviceConfig.lowEnd() => const DeviceConfig(
+    deviceTier: 'low-end',
+    idleReleaseDelay: Duration(minutes: 1),
+    memoryCheckInterval: Duration(seconds: 30),
+    enableMemoryPressureRelease: true,
+    memoryPressureThreshold: Duration(minutes: 1), // 更激进的内存管理
+  );
 }

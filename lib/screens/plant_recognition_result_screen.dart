@@ -1,6 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/recognition_result.dart';
+import '../models/app_settings.dart';
 import '../widgets/plant_recognition_card.dart';
+import '../services/app_state.dart';
+import '../services/recognition_service.dart';
 
 /// 植物识别结果页面 - 生活化展示
 class PlantRecognitionResultScreen extends StatefulWidget {
@@ -20,7 +25,14 @@ class PlantRecognitionResultScreen extends StatefulWidget {
 
 class _PlantRecognitionResultScreenState
     extends State<PlantRecognitionResultScreen> {
-  bool _showAdvancedInfo = false;
+  bool _isReRecognizing = false;
+  RecognitionResponse? _currentResponse;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentResponse = widget.response;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +40,21 @@ class _PlantRecognitionResultScreenState
       appBar: AppBar(
         title: const Text('识别结果'),
         actions: [
-          if (widget.response.success && widget.response.results.isNotEmpty)
+          // 重新识别按钮
+          if (widget.photoPath != null)
+            IconButton(
+              onPressed: _isReRecognizing ? null : _reRecognize,
+              icon: _isReRecognizing 
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh),
+              tooltip: '重新识别',
+            ),
+          // 分享按钮
+          if ((_currentResponse?.success ?? false) && (_currentResponse?.results.isNotEmpty ?? false))
             IconButton(
               onPressed: _shareResult,
               icon: const Icon(Icons.share),
@@ -43,29 +69,15 @@ class _PlantRecognitionResultScreenState
             // 原始照片展示
             if (widget.photoPath != null) _buildPhotoSection(),
 
-            // 识别结果摘要
-            _buildSummarySection(),
-
-            // 主要识别结果
-            RecognitionResultsList(
-              response: widget.response,
-              onResultTap: _showPlantDetails,
-              onResultSave: _saveToMyGarden,
-            ),
-
-            // 高级信息切换
-            if (widget.response.success && widget.response.results.isNotEmpty)
-              _buildAdvancedInfoToggle(),
-
-            // 操作建议
-            if (widget.response.success) _buildActionSuggestions(),
+            // 简化的识别结果显示
+            _buildSimpleResult(),
 
             const SizedBox(height: 24),
           ],
         ),
       ),
       bottomNavigationBar:
-          widget.response.success && widget.response.bestMatch != null
+          _currentResponse!.success && _currentResponse!.bestMatch != null
           ? _buildBottomActions()
           : null,
     );
@@ -100,253 +112,245 @@ class _PlantRecognitionResultScreenState
     );
   }
 
-  Widget _buildSummarySection() {
+
+  /// 简化的识别结果显示
+  Widget _buildSimpleResult() {
+    if (!_currentResponse!.success) {
+      return _buildErrorCard();
+    }
+
+    if (_currentResponse!.results.isEmpty) {
+      return _buildEmptyCard();
+    }
+
+    final result = _currentResponse!.bestMatch!;
     final theme = Theme.of(context);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-            theme.colorScheme.surfaceVariant.withValues(alpha: 0.1),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 植物名称
           Row(
             children: [
-              Icon(
-                Icons.auto_awesome,
-                color: theme.colorScheme.primary,
-                size: 24,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'AI识别结果',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+              Icon(Icons.eco, color: theme.colorScheme.primary, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  result.name,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
               ),
             ],
           ),
+
+          const SizedBox(height: 16),
+
+          // 描述
+          Text(
+            result.description,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              height: 1.5,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // 简单的置信度和提醒
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getConfidenceColor(result.confidence).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _getConfidenceColor(result.confidence).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Text(
+                  '置信度: ${result.confidenceText}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: _getConfidenceColor(result.confidence),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  '谨慎处理',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.orange.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorCard() {
+    final theme = Theme.of(context);
+    final error = _currentResponse!.error ?? '未知错误';
+    
+    // 检查是否是非植物检测
+    final isNonPlant = error.contains('未检测到植物') || error.contains('图片中没有植物');
+    
+    // 检查是否是超时错误
+    final isTimeout = error.contains('超时') || error.contains('timeout');
+    
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isNonPlant 
+            ? theme.colorScheme.surfaceVariant 
+            : isTimeout
+                ? Colors.orange.withValues(alpha: 0.1)
+                : theme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            isNonPlant 
+                ? Icons.search_off 
+                : isTimeout 
+                    ? Icons.timer
+                    : Icons.error_outline,
+            color: isNonPlant 
+                ? theme.colorScheme.onSurfaceVariant 
+                : isTimeout
+                    ? Colors.orange
+                    : theme.colorScheme.error,
+            size: 48,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            isNonPlant 
+                ? '未检测到植物' 
+                : isTimeout
+                    ? '识别超时'
+                    : '识别失败',
+            style: theme.textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
           Text(
-            widget.response.summary,
-            style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
+            isNonPlant 
+                ? '请确保照片中包含植物，然后重新拍摄' 
+                : isTimeout
+                    ? '模型初次加载需要较长时间，请重新尝试或稍等片刻'
+                    : error,
+            style: theme.textTheme.bodyMedium,
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 12),
-          _buildQuickStats(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickStats() {
-    final theme = Theme.of(context);
-    final bestMatch = widget.response.bestMatch;
-
-    if (bestMatch == null) return const SizedBox.shrink();
-
-    return Row(
-      children: [
-        _buildStatItem(
-          theme,
-          Icons.verified,
-          '置信度',
-          bestMatch.confidenceText,
-          _getConfidenceColor(bestMatch.confidence),
-        ),
-        const SizedBox(width: 16),
-        _buildStatItem(
-          theme,
-          Icons.security,
-          '安全性',
-          _getSafetyText(bestMatch.safety.level),
-          _getSafetyColor(bestMatch.safety.level),
-        ),
-        const SizedBox(width: 16),
-        if (bestMatch.care != null)
-          _buildStatItem(
-            theme,
-            Icons.spa,
-            '养护',
-            bestMatch.care!.difficulty,
-            theme.colorScheme.onSurfaceVariant,
-          ),
-      ],
-    );
-  }
-
-  Widget _buildStatItem(
-    ThemeData theme,
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 18),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        Text(
-          value,
-          style: theme.textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAdvancedInfoToggle() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: ExpansionTile(
-        title: const Text('显示学术信息'),
-        subtitle: Text(_showAdvancedInfo ? '隐藏专业分类信息' : '查看学名、科属等专业信息'),
-        leading: const Icon(Icons.science),
-        onExpansionChanged: (expanded) {
-          setState(() {
-            _showAdvancedInfo = expanded;
-          });
-        },
-        children: [
-          if (_showAdvancedInfo && widget.response.bestMatch != null)
-            _buildAdvancedInfo(widget.response.bestMatch!),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAdvancedInfo(RecognitionResult result) {
-    final theme = Theme.of(context);
-
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (result.scientificName != null)
-            _buildAdvancedInfoItem('学名', result.scientificName!),
-          if (result.family != null)
-            _buildAdvancedInfoItem('科属', result.family!),
-          _buildAdvancedInfoItem(
-            '置信度',
-            '${(result.confidence * 100).toStringAsFixed(1)}%',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAdvancedInfoItem(String label, String value) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 60,
-            child: Text(
-              '$label：',
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w500,
+          if (isNonPlant) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '提示：AI可以识别花朵、叶子、树木等各种植物',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          Expanded(child: Text(value, style: theme.textTheme.bodySmall)),
+          ],
+          if (isTimeout) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb_outline, color: Colors.orange, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '提示：第一次使用时模型需要初始化，通常需要1-3分钟',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildActionSuggestions() {
+  Widget _buildEmptyCard() {
     final theme = Theme.of(context);
-
     return Container(
       margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceVariant,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '接下来可以做什么？',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Icon(Icons.search_off, color: theme.colorScheme.onSurfaceVariant, size: 48),
           const SizedBox(height: 12),
-          _buildSuggestionCard(
-            theme,
-            Icons.bookmark_add,
-            '保存到我的图鉴',
-            '记录这次相遇，建立个人植物档案',
-            () => _saveToMyGarden(widget.response.bestMatch!),
-          ),
-          _buildSuggestionCard(
-            theme,
-            Icons.camera_alt,
-            '拍摄更多角度',
-            '从不同角度拍摄，获得更准确的识别结果',
-            _retakePhoto,
-          ),
-          _buildSuggestionCard(
-            theme,
-            Icons.share,
-            '分享给朋友',
-            '和朋友分享你的发现',
-            _shareResult,
+          Text('未找到匹配的植物', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text(
+            '请尝试从不同角度拍摄，或使用更清晰的照片',
+            style: theme.textTheme.bodyMedium,
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSuggestionCard(
-    ThemeData theme,
-    IconData icon,
-    String title,
-    String subtitle,
-    VoidCallback onTap,
-  ) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: theme.colorScheme.primaryContainer,
-          child: Icon(
-            icon,
-            color: theme.colorScheme.onPrimaryContainer,
-            size: 20,
-          ),
-        ),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
-      ),
-    );
-  }
 
   Widget _buildBottomActions() {
     return Container(
@@ -378,7 +382,7 @@ class _PlantRecognitionResultScreenState
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () => _saveToMyGarden(widget.response.bestMatch!),
+              onPressed: () => _saveToMyGarden(_currentResponse!.bestMatch!),
               icon: const Icon(Icons.bookmark_add),
               label: const Text('保存到图鉴'),
             ),
@@ -427,35 +431,80 @@ class _PlantRecognitionResultScreenState
 
   // 事件处理
   void _showPlantDetails(RecognitionResult result) {
-    // TODO: 导航到植物详情页面
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('查看 ${result.name} 的详细信息')));
+    // 此功能已在其他页面实现，直接返回
+    Navigator.pop(context);
   }
 
   void _saveToMyGarden(RecognitionResult result) {
-    // TODO: 保存到用户的植物图鉴
+    // 植物已通过识别流程自动保存
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${result.name} 已保存到我的图鉴'),
-        action: SnackBarAction(
-          label: '查看',
-          onPressed: () {
-            // TODO: 导航到我的图鉴
-          },
-        ),
+      const SnackBar(
+        content: Text('植物已自动保存到记录中'),
       ),
     );
+    Navigator.pop(context);
+  }
+
+  /// 重新识别功能 - 不走缓存
+  Future<void> _reRecognize() async {
+    if (widget.photoPath == null || _isReRecognizing) return;
+
+    setState(() {
+      _isReRecognizing = true;
+    });
+
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final recognitionService = Provider.of<RecognitionService>(context, listen: false);
+      final settings = appState.settings ?? AppSettings();
+
+      final imageFile = File(widget.photoPath!);
+      
+      // 强制重新识别，不使用缓存
+      final response = await recognitionService.identifyPlant(
+        imageFile,
+        settings,
+        // 如果有preferredMethod参数，可以强制使用本地模型
+        preferredMethod: RecognitionMethod.embedded,
+      );
+
+      if (mounted) {
+        setState(() {
+          _currentResponse = response;
+          _isReRecognizing = false;
+        });
+
+        // 显示重新识别的结果提示
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.success 
+                ? '重新识别完成' 
+                : '重新识别失败: ${response.error}'),
+            backgroundColor: response.success 
+                ? Colors.green 
+                : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isReRecognizing = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('重新识别出错: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _shareResult() {
-    final bestMatch = widget.response.bestMatch;
-    if (bestMatch == null) return;
-
-    // TODO: 实现分享功能
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('分享 ${bestMatch.name} 的识别结果')));
+    // 分享功能已在植物详情页实现，此处关闭页面
+    Navigator.pop(context);
   }
 
   void _retakePhoto() {

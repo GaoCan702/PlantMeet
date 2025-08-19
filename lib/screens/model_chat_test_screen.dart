@@ -94,13 +94,30 @@ class _ModelChatTestScreenState extends State<ModelChatTestScreen> {
         });
       }
     } catch (e) {
+      // 检查是否是上下文过长的错误
+      final isContextTooLong = e.toString().contains('maxTokens') || 
+                               e.toString().contains('too long') ||
+                               e.toString().contains('OUT_OF_RANGE');
+
       // 更新占位消息为错误消息，而不是添加新消息
       setState(() {
         _messages.last = Message.text(
-          text: '❌ 处理失败: $e\n\n请检查模型状态或重试。',
+          text: isContextTooLong 
+              ? '❌ 对话历史过长，请点击右上角清空聊天重新开始' 
+              : '❌ 处理失败: $e\n\n请检查模型状态或重试。',
           isUser: false,
         );
       });
+
+      if (isContextTooLong) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('对话历史过长，建议清空聊天记录重新开始'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
     } finally {
       setState(() {
         _isProcessing = false;

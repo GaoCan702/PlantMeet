@@ -18,13 +18,15 @@ class _MNNChatConfigScreenState extends State<MNNChatConfigScreen> {
   final _formKey = GlobalKey<FormState>();
   final _baseUrlController = TextEditingController();
   final _apiKeyController = TextEditingController();
-  final RecognitionService _recognitionService = RecognitionService();
+  late RecognitionService _recognitionService;
   bool _isApiKeyVisible = false;
   bool _isTesting = false;
 
   @override
   void initState() {
     super.initState();
+    // 使用 Provider 提供的单例服务
+    _recognitionService = Provider.of<RecognitionService>(context, listen: false);
     final appState = Provider.of<AppState>(context, listen: false);
     _settings = appState.settings ?? AppSettings();
     _baseUrlController.text = _settings.baseUrl ?? '';

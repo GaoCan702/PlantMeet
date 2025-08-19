@@ -184,14 +184,12 @@ class RecognitionResponse {
   final String? error;
   final bool success;
   final RecognitionMethod method;
-  final String? methodDescription; // 用户友好的方法描述
 
   RecognitionResponse({
     required this.results,
     this.error,
     required this.success,
     required this.method,
-    this.methodDescription,
   });
 
   factory RecognitionResponse.success({
@@ -202,7 +200,6 @@ class RecognitionResponse {
       results: results,
       success: true,
       method: method,
-      methodDescription: method.displayName,
     );
   }
 
@@ -215,7 +212,6 @@ class RecognitionResponse {
       error: error,
       success: false,
       method: method,
-      methodDescription: method.displayName,
     );
   }
 

@@ -14,10 +14,10 @@ from pathlib import Path
 # 模型配置
 MODEL_URL = "https://huggingface.co/google/gemma-3n-E4B-it-litert-preview/resolve/main/gemma-3n-E4B-it-int4.task"
 MODEL_FILENAME = "gemma-3n-E4B-it-int4.task"
-EXPECTED_SIZE = 4405655031  # 约 4.1GB
+EXPECTED_SIZE = 4405655031  # 约 4.1GB (actual E4B file size)
 
-# HuggingFace Token
-HF_TOKEN = 'your_hf_token_here'
+# HuggingFace Token - 从环境变量获取
+HF_TOKEN = os.environ.get('HF_TOKEN', 'your_hf_token_here')
 
 def get_project_root() -> Path:
     """获取项目根目录"""

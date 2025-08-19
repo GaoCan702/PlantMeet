@@ -35,6 +35,7 @@ class PlantEncounterTable extends Table {
   IntColumn get method => intEnum<RecognitionMethod>()();
   TextColumn get userDefinedName => text().nullable()(); // 用户自定义名称
   BoolColumn get isIdentified => boolean().withDefault(const Constant(false))(); // 是否已识别
+  TextColumn get mergedToSpeciesId => text().nullable()(); // 手动归类到的物种ID
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -65,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -92,6 +93,13 @@ class AppDatabase extends _$AppDatabase {
         );
         // 将speciesId改为可空在某些数据库中需要重建表
         // 这里假设新安装或可以接受数据迁移
+      }
+      if (from < 5) {
+        // 添加手动归类字段
+        await m.addColumn(
+          plantEncounterTable,
+          plantEncounterTable.mergedToSpeciesId,
+        );
       }
     },
   );

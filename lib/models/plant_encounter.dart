@@ -17,6 +17,7 @@ class PlantEncounter {
   // 新增字段支持未识别植物
   final String? userDefinedName;  // 用户自定义名称，如"路边的小黄花"
   final bool isIdentified;  // 是否已识别
+  final String? mergedToSpeciesId;  // 手动归类到的物种ID
 
   PlantEncounter({
     required this.id,
@@ -33,7 +34,8 @@ class PlantEncounter {
     required this.updatedAt,
     this.userDefinedName,
     bool? isIdentified,
-  }) : isIdentified = isIdentified ?? (speciesId != null);
+    this.mergedToSpeciesId,
+  }) : isIdentified = isIdentified ?? (speciesId != null || mergedToSpeciesId != null);
 
   factory PlantEncounter.fromJson(Map<String, dynamic> json) {
     return PlantEncounter(
@@ -50,7 +52,8 @@ class PlantEncounter {
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       userDefinedName: json['user_defined_name'] as String?,
-      isIdentified: json['is_identified'] as bool? ?? (json['species_id'] != null),
+      isIdentified: json['is_identified'] as bool? ?? (json['species_id'] != null || json['merged_to_species_id'] != null),
+      mergedToSpeciesId: json['merged_to_species_id'] as String?,
     );
   }
 
@@ -70,6 +73,7 @@ class PlantEncounter {
       'updated_at': updatedAt.toIso8601String(),
       'user_defined_name': userDefinedName,
       'is_identified': isIdentified,
+      'merged_to_species_id': mergedToSpeciesId,
     };
   }
 
@@ -88,6 +92,7 @@ class PlantEncounter {
     DateTime? updatedAt,
     String? userDefinedName,
     bool? isIdentified,
+    String? mergedToSpeciesId,
   }) {
     return PlantEncounter(
       id: id ?? this.id,
@@ -104,6 +109,7 @@ class PlantEncounter {
       updatedAt: updatedAt ?? this.updatedAt,
       userDefinedName: userDefinedName ?? this.userDefinedName,
       isIdentified: isIdentified ?? this.isIdentified,
+      mergedToSpeciesId: mergedToSpeciesId ?? this.mergedToSpeciesId,
     );
   }
 }

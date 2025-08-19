@@ -1105,7 +1105,7 @@ class _MNNChatTestScreenState extends State<MNNChatTestScreen>
           const SizedBox(height: 4),
           Text('描述: ${result.description}'),
         ],
-        if (result.features.isNotEmpty) ...[
+        if (result.features.isNotEmpty && !result.features.any((f) => f.contains('Gemma'))) ...[
           const SizedBox(height: 4),
           Text('特征: ${result.features.join(', ')}'),
         ],

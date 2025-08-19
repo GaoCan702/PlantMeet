@@ -153,7 +153,7 @@ class SimpleModelDownloader {
         }
       } else {
         // 如果无法获取远程大小，使用已知的期望大小
-        final expectedSize = 4405655031; // gemma-3n-E4B-it-int4.task 的准确大小
+        final expectedSize = 4405655031; // gemma-3n-E4B-it-int4.task 的准确大小 (约4.1GB)
         if (actualSize == expectedSize) {
           _logger.i('✅ 本地模型文件完整: ${file.path} (${(actualSize / 1024 / 1024 / 1024).toStringAsFixed(2)} GB)');
           return true;

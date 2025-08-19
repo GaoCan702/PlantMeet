@@ -7,7 +7,6 @@ import 'package:intl/intl.dart';
 import '../services/app_state.dart';
 import '../services/location_service.dart';
 import '../services/fast_location_service.dart';
-import '../utils/location_formatter.dart';
 import '../utils/location_display_helper.dart';
 import '../models/index.dart';
 
@@ -99,7 +98,7 @@ class _QuickRecordScreenV2State extends State<QuickRecordScreenV2> {
         );
       }
     } catch (e) {
-      print('获取位置错误: $e');
+      // 获取位置错误: $e
       setState(() {
         _locationAddress = '位置服务异常';
       });
@@ -125,7 +124,7 @@ class _QuickRecordScreenV2State extends State<QuickRecordScreenV2> {
         });
       }
     } catch (e) {
-      print('获取地址失败: $e');
+      // 获取地址失败: $e
     }
   }
   
@@ -367,7 +366,7 @@ class _QuickRecordScreenV2State extends State<QuickRecordScreenV2> {
             right: 8,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.6),
+                color: Colors.black.withAlpha(153),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: IconButton(

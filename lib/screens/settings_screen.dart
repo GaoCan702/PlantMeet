@@ -70,15 +70,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  Future<void> _saveDownloadPolicy() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefsAllowBackgroundKey, _allowBackgroundDownload);
-    await prefs.setBool(_prefsWifiOnlyKey, _wifiOnlyDownload);
-    await prefs.setBool(
-      _prefsAutoPauseLowBatteryKey,
-      _autoPauseLowBattery,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -664,11 +655,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         textColor = Colors.orange.shade700;
         text = '下载中';
         break;
+      case ModelStatus.loading:
+        backgroundColor = Colors.orange.shade100;
+        textColor = Colors.orange.shade700;
+        text = '加载中';
+        break;
       case ModelStatus.error:
         backgroundColor = Colors.red.shade100;
         textColor = Colors.red.shade700;
         text = '错误';
         break;
+      case ModelStatus.notDownloaded:
       default:
         backgroundColor = Colors.grey.shade100;
         textColor = Colors.grey.shade700;
@@ -739,7 +736,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   builder: (context, snapshot) {
                     final stats = snapshot.data ?? {};
                     final modelSizeMB = (stats['model_size_mb'] ?? 0.0) as double;
-                    final modelSizeFormatted = stats['model_size_mb_formatted'] ?? '0.0';
+                    // final modelSizeFormatted = stats['model_size_mb_formatted'] ?? '0.0';
                     final isModelDownloaded = modelService.isModelDownloaded;
                     
                     return Column(

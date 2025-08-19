@@ -6,6 +6,8 @@ import '../services/app_state.dart';
 import '../widgets/unified_plant_card.dart';
 import 'unidentified_plant_detail_screen_v2.dart';
 import 'plant_detail_screen_v2.dart';
+import '../services/share_service.dart';
+import '../models/plant_species.dart';
 
 class HomeScreenV3 extends StatefulWidget {
   const HomeScreenV3({super.key});
@@ -43,6 +45,44 @@ class _HomeScreenV3State extends State<HomeScreenV3>
     _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // 分享今日记录
+  void _shareTodayEncounters(BuildContext context) {
+    final appState = Provider.of<AppState>(context, listen: false);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    // 筛选今日的记录
+    final todayEncounters = appState.encounters.where((e) {
+      final encounterDate = DateTime(
+        e.encounterDate.year,
+        e.encounterDate.month,
+        e.encounterDate.day,
+      );
+      return encounterDate == today;
+    }).toList();
+    
+    if (todayEncounters.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('今天还没有记录哦')),
+      );
+      return;
+    }
+    
+    // 构建 species map
+    final speciesMap = <String, PlantSpecies>{};
+    for (final species in appState.species) {
+      speciesMap[species.id] = species;
+    }
+    
+    // 分享
+    ShareService.shareMultipleEncounters(
+      encounters: todayEncounters,
+      speciesMap: speciesMap,
+      title: '今日植物记录 ${DateFormat('yyyy-MM-dd').format(now)}',
+      context: context,
+    );
   }
 
   @override
@@ -118,6 +158,9 @@ class _HomeScreenV3State extends State<HomeScreenV3>
                       icon: const Icon(Icons.more_vert),
                       onSelected: (value) {
                         switch (value) {
+                          case 'share_today':
+                            _shareTodayEncounters(context);
+                            break;
                           case 'settings':
                             Navigator.pushNamed(context, '/settings');
                             break;
@@ -127,6 +170,17 @@ class _HomeScreenV3State extends State<HomeScreenV3>
                         }
                       },
                       itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'share_today',
+                          child: Row(
+                            children: [
+                              Icon(Icons.share, size: 20),
+                              SizedBox(width: 12),
+                              Text('分享今日记录'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
                         const PopupMenuItem(
                           value: 'settings',
                           child: Row(
