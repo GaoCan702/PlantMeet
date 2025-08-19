@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_settings.dart';
 import '../models/embedded_model.dart';
 import '../services/app_state.dart';
 import '../services/embedded_model_service.dart';
+import '../services/recognition_service.dart';
 import '../models/privacy_policy.dart';
 import '../services/privacy_service.dart';
+import '../models/recognition_result.dart';
 import 'mnn_chat_config_screen.dart';
 import 'cloud_service_config_screen.dart';
 import 'policy_detail_screen.dart';
@@ -23,21 +24,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late AppSettings _settings;
   final _formKey = GlobalKey<FormState>();
 
-  // 下载策略（通过 SharedPreferences 持久化，便于服务在无上下文时读取）
-  bool _allowBackgroundDownload = false; // 是否允许后台继续下载
-  bool _wifiOnlyDownload = true; // 仅在 Wi‑Fi 下下载
-  bool _autoPauseLowBattery = true; // 低电量自动暂停
-
-  static const _prefsAllowBackgroundKey = 'allow_background_download';
-  static const _prefsWifiOnlyKey = 'wifi_only_download';
-  static const _prefsAutoPauseLowBatteryKey = 'auto_pause_low_battery';
 
   @override
   void initState() {
     super.initState();
     final appState = Provider.of<AppState>(context, listen: false);
     _settings = appState.settings ?? AppSettings();
-    _loadDownloadPolicy();
   }
 
   @override
@@ -59,16 +51,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  Future<void> _loadDownloadPolicy() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _allowBackgroundDownload =
-          prefs.getBool(_prefsAllowBackgroundKey) ?? false;
-      _wifiOnlyDownload = prefs.getBool(_prefsWifiOnlyKey) ?? true;
-      _autoPauseLowBattery =
-          prefs.getBool(_prefsAutoPauseLowBatteryKey) ?? true;
-    });
-  }
 
 
   @override
@@ -86,10 +68,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             16 + MediaQuery.of(context).padding.bottom,
           ),
           children: [
+            // AI识别服务选择
+            _buildAIServiceSelectionSection(),
+            const SizedBox(height: 16),
             // 应用内AI模型管理
             _buildEmbeddedModelSection(),
             const SizedBox(height: 16),
-            // 下载策略已迁移到“离线AI模型”页面
+            // 下载策略已迁移到"离线AI模型"页面
             // MNN Chat服务
             _buildMNNChatServiceSection(),
             const SizedBox(height: 16),
@@ -333,17 +318,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Navigator.of(context).pop();
                 try {
                   await PrivacyService.revokeConsent();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('已撤回同意，应用将重启以应用更改')),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('已撤回同意，应用将重启以应用更改')),
+                    );
+                  }
                   // 这里可以重启应用或返回到同意页面
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('撤回同意失败: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('撤回同意失败: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               },
               child: Text(
@@ -922,5 +911,328 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } else {
       return '${(sizeInBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
     }
+  }
+
+  /// 构建AI服务选择区域
+  Widget _buildAIServiceSelectionSection() {
+    return Consumer<RecognitionService>(
+      builder: (context, recognitionService, child) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.smart_toy, color: Theme.of(context).primaryColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      'AI识别服务',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '选择您首选的植物识别服务',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 当前首选服务显示
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.star,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '当前首选：${_settings.preferredRecognitionMethod.displayName}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // AI服务选项列表
+                _buildAIServiceOption(
+                  RecognitionMethod.embedded,
+                  Icons.smartphone,
+                  Colors.green,
+                  recognitionService,
+                ),
+                const SizedBox(height: 12),
+                _buildAIServiceOption(
+                  RecognitionMethod.local,
+                  Icons.computer,
+                  Colors.blue,
+                  recognitionService,
+                ),
+                const SizedBox(height: 12),
+                _buildAIServiceOption(
+                  RecognitionMethod.cloud,
+                  Icons.cloud,
+                  Colors.purple,
+                  recognitionService,
+                ),
+                const SizedBox(height: 12),
+                _buildAIServiceOption(
+                  RecognitionMethod.hybrid,
+                  Icons.auto_awesome,
+                  Colors.orange,
+                  recognitionService,
+                ),
+
+                const SizedBox(height: 16),
+
+                // 智能推荐
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.lightbulb_outline, color: Colors.blue.shade600, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '推荐使用"智能识别"，会自动选择最佳服务',
+                          style: TextStyle(
+                            color: Colors.blue.shade700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 构建单个AI服务选项
+  Widget _buildAIServiceOption(
+    RecognitionMethod method,
+    IconData icon,
+    Color color,
+    RecognitionService recognitionService,
+  ) {
+    final isSelected = _settings.preferredRecognitionMethod == method;
+    final isAvailable = recognitionService.isMethodAvailable(method);
+    
+    return InkWell(
+      onTap: isAvailable ? () => _selectAIService(method) : () => _showServiceConfigDialog(method),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? color.withValues(alpha: 0.1) 
+              : (isAvailable ? Colors.transparent : Colors.grey.shade50),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected 
+                ? color 
+                : (isAvailable ? Colors.grey.shade300 : Colors.grey.shade200),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: (isAvailable ? color : Colors.grey).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: isAvailable ? color : Colors.grey,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        method.displayName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: isAvailable ? null : Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildServiceStatusBadge(method, isAvailable),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    method.description,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: isAvailable ? Theme.of(context).colorScheme.onSurfaceVariant : Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle, color: color, size: 20)
+            else if (!isAvailable)
+              Icon(Icons.settings, color: Colors.grey.shade600, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建服务状态徽章
+  Widget _buildServiceStatusBadge(RecognitionMethod method, bool isAvailable) {
+    Color backgroundColor;
+    Color textColor;
+    String text;
+
+    if (isAvailable) {
+      backgroundColor = Colors.green.shade100;
+      textColor = Colors.green.shade700;
+      text = '可用';
+    } else {
+      backgroundColor = Colors.grey.shade100;
+      textColor = Colors.grey.shade600;
+      text = method == RecognitionMethod.hybrid ? '自动' : '需配置';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  /// 选择AI服务
+  void _selectAIService(RecognitionMethod method) {
+    setState(() {
+      _settings = _settings.copyWith(preferredRecognitionMethod: method);
+    });
+    _onSettingChanged();
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('已设置首选服务：${method.displayName}'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  /// 显示服务配置对话框
+  void _showServiceConfigDialog(RecognitionMethod method) {
+    String title = '';
+    String content = '';
+    String actionText = '';
+    VoidCallback? action;
+
+    switch (method) {
+      case RecognitionMethod.embedded:
+        title = '应用内AI识别';
+        content = '需要下载AI模型才能使用此服务。模型大小约4GB，建议在Wi-Fi环境下下载。';
+        actionText = '前往下载';
+        action = () {
+          Navigator.pop(context);
+          Navigator.pushNamed(context, '/embedded-model-manager');
+        };
+        break;
+      case RecognitionMethod.local:
+        title = '本地AI识别';
+        content = '需要配置本地MNN Chat服务才能使用此功能。';
+        actionText = '前往配置';
+        action = () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MNNChatConfigScreen()),
+          );
+        };
+        break;
+      case RecognitionMethod.cloud:
+        title = '云端AI识别';
+        content = '需要配置云端服务API才能使用此功能。';
+        actionText = '前往配置';
+        action = () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CloudServiceConfigScreen()),
+          );
+        };
+        break;
+      default:
+        return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(title),
+          ],
+        ),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: action,
+            child: Text(actionText),
+          ),
+        ],
+      ),
+    );
   }
 }
