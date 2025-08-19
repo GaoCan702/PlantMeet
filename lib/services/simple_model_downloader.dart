@@ -29,12 +29,18 @@ class SimpleModelDownloader {
   
   // 动态获取模型URL
   static String get _modelUrl {
-    if (_localModelServer.isNotEmpty) {
-      // 本地服务器模式（开发调试）
+    // 优先级：HF_ACCESS_TOKEN > LOCAL_MODEL_SERVER
+    if (_envAccessToken.isNotEmpty) {
+      // 有HF Token：强制使用HuggingFace服务器
+      print('🔑[SimpleModelDownloader] 检测到HF_ACCESS_TOKEN，使用HuggingFace服务器');
+      return _defaultModelUrl;
+    } else if (_localModelServer.isNotEmpty) {
+      // 无HF Token但有本地服务器：使用本地服务器
+      print('🚀[SimpleModelDownloader] 使用本地服务器: $_localModelServer');
       return '$_localModelServer/$_fileName';
     } else {
-      // HuggingFace模式（生产环境）
-      return _defaultModelUrl;
+      // 都没有：抛出错误提示用户配置
+      throw Exception('❌ 模型下载配置错误：请配置 HF_ACCESS_TOKEN 或 LOCAL_MODEL_SERVER');
     }
   }
   
@@ -187,15 +193,24 @@ class SimpleModelDownloader {
   /// 获取远程文件大小
   Future<int?> _getRemoteFileSize() async {
     try {
+      // 检查配置是否有效
+      String modelUrl;
+      try {
+        modelUrl = _modelUrl;
+      } catch (e) {
+        _logger.w('无法获取模型URL: $e');
+        return null;
+      }
+
       final headers = <String, String>{
         'User-Agent': 'PlantMeet/1.0 Flutter App',
       };
-      // 仅在使用HuggingFace时添加Authorization头
-      if (_localModelServer.isEmpty && _envAccessToken.isNotEmpty) {
+      // 仅在使用HuggingFace且有Token时添加Authorization头
+      if (_envAccessToken.isNotEmpty) {
         headers['Authorization'] = 'Bearer $_envAccessToken';
       }
 
-      final response = await http.head(Uri.parse(_modelUrl), headers: headers);
+      final response = await http.head(Uri.parse(modelUrl), headers: headers);
 
       if (response.statusCode == 200) {
         final contentLength = response.headers['content-length'];
@@ -248,12 +263,18 @@ class SimpleModelDownloader {
         }
       }
 
+      // 调试信息：显示下载配置状态
+      print('🔗[SimpleModelDownloader] HF_ACCESS_TOKEN: ${_envAccessToken.isNotEmpty ? "已提供" : "未提供"}');
+      print('🔗[SimpleModelDownloader] LOCAL_MODEL_SERVER: "$_localModelServer"');
+      print('🔗[SimpleModelDownloader] 最终下载URL: $_modelUrl');
+
       // 创建 HTTP 请求
       final request = http.Request('GET', Uri.parse(_modelUrl));
       request.headers.addAll({'User-Agent': 'PlantMeet/1.0 Flutter App'});
-      // 仅在使用HuggingFace时添加Authorization头
-      if (_localModelServer.isEmpty && _envAccessToken.isNotEmpty) {
+      // 仅在使用HuggingFace且有Token时添加Authorization头
+      if (_envAccessToken.isNotEmpty) {
         request.headers['Authorization'] = 'Bearer $_envAccessToken';
+        print('🔐[SimpleModelDownloader] 已添加HuggingFace授权头');
       }
 
       // 支持断点续传
@@ -415,6 +436,14 @@ class SimpleModelDownloader {
     final fileSize = await getModelFileSize(modelId);
     final remoteSize = await _getRemoteFileSize();
 
+    // 安全获取模型URL
+    String? modelUrl;
+    try {
+      modelUrl = _modelUrl;
+    } catch (e) {
+      modelUrl = 'Error: $e';
+    }
+
     return {
       'is_downloaded': isDownloaded,
       'local_size_bytes': fileSize,
@@ -424,7 +453,7 @@ class SimpleModelDownloader {
           ? remoteSize / 1024 / 1024 / 1024
           : null,
       'file_path': await getModelFilePath(modelId),
-      'model_url': _modelUrl,
+      'model_url': modelUrl,
     };
   }
 
