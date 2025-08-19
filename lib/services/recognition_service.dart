@@ -8,6 +8,7 @@ import '../models/recognition_result.dart';
 import '../models/app_settings.dart';
 import 'mnn_chat_service.dart';
 import 'embedded_model_service.dart';
+import 'gemini_plant_recognition_service.dart';
 
 /// 植物识别服务 - 支持应用内模型、MNN Chat和云端识别的生活化植物识别
 /// 单例模式，确保全局只有一个识别服务实例
@@ -610,10 +611,48 @@ class RecognitionService extends ChangeNotifier {
     AppSettings settings,
   ) async {
     try {
-      return await _identifyWithAPI(imageFile, settings);
+      // 检查是否是Gemini API
+      if (settings.baseUrl != null && 
+          settings.baseUrl!.contains('generativelanguage.googleapis.com')) {
+        return await _identifyWithGemini(imageFile, settings);
+      } else {
+        return await _identifyWithAPI(imageFile, settings);
+      }
     } catch (e) {
       return RecognitionResponse.error(
         error: '云端识别失败: $e',
+        method: RecognitionMethod.cloud,
+      );
+    }
+  }
+
+  /// 使用Gemini API进行植物识别
+  Future<RecognitionResponse> _identifyWithGemini(
+    File imageFile,
+    AppSettings settings,
+  ) async {
+    try {
+      _logger.i('🔮[RecognitionService] 使用Gemini API进行云端识别');
+      
+      if (settings.apiKey == null || settings.apiKey!.isEmpty) {
+        return RecognitionResponse.error(
+          error: 'Gemini API密钥未配置',
+          method: RecognitionMethod.cloud,
+        );
+      }
+
+      final geminiService = GeminiPlantRecognitionService(
+        apiKey: settings.apiKey!,
+      );
+
+      final result = await geminiService.identifyPlant(imageFile);
+      
+      _logger.i('✅[RecognitionService] Gemini识别完成: success=${result.success}');
+      return result;
+    } catch (e) {
+      _logger.e('❌[RecognitionService] Gemini识别异常: $e');
+      return RecognitionResponse.error(
+        error: 'Gemini API调用异常: $e',
         method: RecognitionMethod.cloud,
       );
     }
@@ -762,18 +801,28 @@ class RecognitionService extends ChangeNotifier {
     }
 
     try {
-      final uri = Uri.parse('${settings.baseUrl}/health');
-      final response = await http
-          .get(
-            uri,
-            headers: {
-              'Authorization': 'Bearer ${settings.apiKey}',
-              'Accept': 'application/json',
-            },
-          )
-          .timeout(const Duration(seconds: 10));
+      // 检查是否是Gemini API
+      if (settings.baseUrl != null && 
+          settings.baseUrl!.contains('generativelanguage.googleapis.com')) {
+        final geminiService = GeminiPlantRecognitionService(
+          apiKey: settings.apiKey!,
+        );
+        return await geminiService.testConnection();
+      } else {
+        // 普通API连接测试
+        final uri = Uri.parse('${settings.baseUrl}/health');
+        final response = await http
+            .get(
+              uri,
+              headers: {
+                'Authorization': 'Bearer ${settings.apiKey}',
+                'Accept': 'application/json',
+              },
+            )
+            .timeout(const Duration(seconds: 10));
 
-      return response.statusCode == 200;
+        return response.statusCode == 200;
+      }
     } catch (e) {
       return false;
     }

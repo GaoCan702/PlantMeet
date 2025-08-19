@@ -21,6 +21,11 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
   late RecognitionService _recognitionService;
   bool _isApiKeyVisible = false;
   bool _isTesting = false;
+  String _selectedService = 'gemini';
+  
+  // Gemini API预设配置
+  static const String _geminiApiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent';
+  static const String _geminiApiKey = 'AIzaSyDNhhTj-7BW-5UinIjrrpspL9yrlyDGAlU';
 
   @override
   void initState() {
@@ -29,9 +34,21 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
     _recognitionService = Provider.of<RecognitionService>(context, listen: false);
     final appState = Provider.of<AppState>(context, listen: false);
     _settings = appState.settings ?? AppSettings();
-    // 这里可以添加云端API的配置字段，目前先使用现有字段作为示例
-    _cloudApiUrlController.text = _settings.baseUrl ?? '';
-    _cloudApiKeyController.text = _settings.apiKey ?? '';
+    
+    // 设置默认的Gemini API配置
+    _cloudApiUrlController.text = _settings.baseUrl ?? _geminiApiUrl;
+    _cloudApiKeyController.text = _settings.apiKey ?? _geminiApiKey;
+    
+    // 如果是首次使用，自动设置为Gemini服务
+    if (_settings.baseUrl == null || _settings.baseUrl!.isEmpty) {
+      _cloudApiUrlController.text = _geminiApiUrl;
+      _cloudApiKeyController.text = _geminiApiKey;
+      _selectedService = 'gemini';
+    } else if (_settings.baseUrl!.contains('generativelanguage.googleapis.com')) {
+      _selectedService = 'gemini';
+    } else {
+      _selectedService = 'custom';
+    }
   }
 
   @override
@@ -140,9 +157,9 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
       runSpacing: 8,
       children: [
         _buildFeatureChip('🎯 高精度', Colors.blue),
-        _buildFeatureChip('🚀 快速响应', Colors.green),
-        _buildFeatureChip('🔄 实时更新', Colors.orange),
-        _buildFeatureChip('🌍 全球访问', Colors.purple),
+        _buildFeatureChip('🚀 快速响应', Colors.green), 
+        _buildFeatureChip('🔄 Gemini Vision', Colors.orange),
+        _buildFeatureChip('🌍 BYOK模式', Colors.purple),
       ],
     );
   }
@@ -164,6 +181,10 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
           children: [
             Text('服务配置', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
+            
+            // 服务选择器
+            _buildServiceSelector(),
+            const SizedBox(height: 16),
             SwitchListTile(
               title: const Text('启用云端服务'),
               subtitle: const Text('使用云端API进行植物识别'),
@@ -178,11 +199,17 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _cloudApiUrlController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: '云端API地址',
-                hintText: '输入云端植物识别API地址',
-                helperText: '例如: https://api.plantnet.org/v2',
+                hintText: _selectedService == 'gemini' ? 'Gemini API地址（已预设）' : '输入云端植物识别API地址',
+                helperText: _selectedService == 'gemini' 
+                  ? 'Google Gemini Vision Pro API'
+                  : '例如: https://api.plantnet.org/v2',
+                suffixIcon: _selectedService == 'gemini' 
+                  ? Icon(Icons.lock_outline, color: Colors.grey[600])
+                  : null,
               ),
+              enabled: _selectedService != 'gemini', // Gemini模式下禁用编辑
               onChanged: (value) {
                 _onSettingChanged();
               },
@@ -199,19 +226,32 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
               controller: _cloudApiKeyController,
               decoration: InputDecoration(
                 labelText: 'API密钥',
-                hintText: '输入您的API密钥',
-                helperText: '从API提供商获取的身份验证密钥',
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _isApiKeyVisible ? Icons.visibility_off : Icons.visibility,
-                    color: Colors.grey[600],
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isApiKeyVisible = !_isApiKeyVisible;
-                    });
-                  },
-                  tooltip: _isApiKeyVisible ? '隐藏密钥' : '显示密钥',
+                hintText: _selectedService == 'gemini' ? '已预设API密钥（可修改）' : '输入您的API密钥',
+                helperText: _selectedService == 'gemini' 
+                  ? 'Google Cloud Console获取Gemini API密钥 (BYOK)'
+                  : '从API提供商获取的身份验证密钥',
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_selectedService == 'gemini')
+                      IconButton(
+                        icon: Icon(Icons.info_outline, color: Colors.blue[600]),
+                        onPressed: _showGeminiApiInfo,
+                        tooltip: 'Gemini API说明',
+                      ),
+                    IconButton(
+                      icon: Icon(
+                        _isApiKeyVisible ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.grey[600],
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isApiKeyVisible = !_isApiKeyVisible;
+                        });
+                      },
+                      tooltip: _isApiKeyVisible ? '隐藏密钥' : '显示密钥',
+                    ),
+                  ],
                 ),
               ),
               obscureText: !_isApiKeyVisible,
@@ -573,6 +613,126 @@ class _CloudServiceConfigScreenState extends State<CloudServiceConfigScreen> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建服务选择器
+  Widget _buildServiceSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '选择云端服务',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('Google Gemini'),
+                subtitle: const Text('高精度视觉模型'),
+                value: 'gemini',
+                groupValue: _selectedService,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedService = value!;
+                    if (value == 'gemini') {
+                      _cloudApiUrlController.text = _geminiApiUrl;
+                      _cloudApiKeyController.text = _geminiApiKey;
+                    }
+                  });
+                  _onSettingChanged();
+                },
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('自定义API'),
+                subtitle: const Text('其他服务商'),
+                value: 'custom',
+                groupValue: _selectedService,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedService = value!;
+                    if (value == 'custom') {
+                      _cloudApiUrlController.text = '';
+                      _cloudApiKeyController.text = '';
+                    }
+                  });
+                  _onSettingChanged();
+                },
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// 显示Gemini API信息
+  void _showGeminiApiInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.blue[600]),
+            const SizedBox(width: 8),
+            const Text('Gemini API 说明'),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '关于 Gemini API',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('• Google Gemini Vision Pro API'),
+              Text('• 支持图像理解和植物识别'),
+              Text('• BYOK (Bring Your Own Key) 模式'),
+              Text('• 需要在 Google Cloud Console 启用'),
+              SizedBox(height: 16),
+              
+              Text(
+                '如何获取API密钥：',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('1. 访问 Google AI Studio'),
+              Text('2. 创建新的API密钥'),
+              Text('3. 复制密钥并粘贴到此处'),
+              SizedBox(height: 16),
+              
+              Text(
+                '预设密钥说明：',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('应用已预设测试用API密钥，您可以：'),
+              Text('• 直接使用预设密钥测试功能'),
+              Text('• 替换为您自己的API密钥'),
+              Text('• 确保API密钥有足够的配额'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('了解'),
           ),
         ],
       ),
