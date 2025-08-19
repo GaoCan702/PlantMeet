@@ -102,7 +102,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                   icon: Icons.trending_up,
                                   label: '平均遇见',
                                   value:
-                                      '${(encounters.length / species.length).toStringAsFixed(1)}',
+                                      (encounters.length / species.length).toStringAsFixed(1),
                                   color: Colors.purple,
                                 ),
                               ),
